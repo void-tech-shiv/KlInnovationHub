@@ -67,6 +67,8 @@ const TeamApplications = () => {
   };
 
   const handleApply = async (team) => {
+    // Client guard improves UX; server-side checks enforce uniqueness.
+    if (applying !== null || myApplications.has(team.collaboration_id)) return;
     try {
       setApplying(team.collaboration_id);
      await axiosInstance.post( "/collabapplication/apply", { collaborationId:team.collaboration_id});
@@ -86,7 +88,19 @@ const TeamApplications = () => {
         return updated
       });
     } catch (err) {
-      toast.error("Something went wrong. Please try again.");
+      toast.error(err.response?.data?.message || "Unable to submit application.");
+      if (err.response?.status === 409) {
+        // Recover the existing status if the application was submitted from
+        // another device or this page was stale.
+        try {
+          const { data } = await axiosInstance.get("/collabapplication/mine");
+          setMyApplications(new Map(
+            data.map((app) => [app.collaboration.collaboration_id, app])
+          ));
+        } catch {
+          // Keep the API's original error visible to the user.
+        }
+      }
     } finally {
       setApplying(null);
     }
