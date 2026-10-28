@@ -8,16 +8,6 @@ import "aos/dist/aos.css";
 import toast, { Toaster } from "react-hot-toast";
 
 const Section123 = () => {
-  useEffect(() => {
-      AOS.init({
-        duration: 1000,
-        once: true,
-        offset: 100,
-        easing: "ease-out-cubic",
-      });
-
-      fetchStats();
-    }, []);
     const [stats, setStats] = useState({
       projects: 0,
       students: 0,
@@ -25,15 +15,18 @@ const Section123 = () => {
       faculty: 0,
     });
   
-    const fetchStats = async () => {
-      try {
-        const res = await axiosInstance.get("/dashboard/stats");
-        setStats(res.data);
-      } catch (error) {
-        toast.error("Something went wrong. Please try again.");
-      }
-    };
-  
+    useEffect(() => {
+      AOS.init({
+        duration: 1000,
+        once: true,
+        offset: 100,
+        easing: "ease-out-cubic",
+      });
+      axiosInstance.get("/dashboard/stats")
+        .then((res) => setStats(res.data))
+        .catch(() => toast.error("Something went wrong. Please try again."));
+    }, []);
+
     const cards = [
       { icon: FolderKanban, value: stats.projects, label: "Projects Submitted" },
       { icon: GraduationCap, value: stats.students, label: "Students Joined" },

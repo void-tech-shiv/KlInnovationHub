@@ -10,10 +10,12 @@ import {Users,Handshake,Rocket,Pencil} from "lucide-react";
 import FollowSection from "../Follow/FollowSection";
 import toast, { Toaster } from "react-hot-toast";
 import ReviewerNavbar from "../Reviewer/ReviewerNavbar";
+import { getSharedAuthRole } from "../../Api/sessionAuth";
 
 const Profile = () => {
   
-  const isReviewer = !!localStorage.getItem("reviewerToken");
+  const isReviewer = getSharedAuthRole() === "reviewer";
+  const profileAuth = { authRole: isReviewer ? "reviewer" : "student" };
   const { studentId: routeStudentId } = useParams();
   const loggedInStudent = JSON.parse(localStorage.getItem("student"));
   const loggedInStudentId = localStorage.getItem("studentId");
@@ -25,17 +27,55 @@ const Profile = () => {
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [selectedProjectId, setSelectedProjectId] = useState(null);
   const [deleteType, setDeleteType] = useState("");
-  const [studentName, setStudentName] = useState("");
-  const [githubUrl, setGithubUrl] = useState("");
-  const [linkedinUrl, setLinkedinUrl] = useState("");
-  const [selectedAvatar, setSelectedAvatar] = useState("");
+  const [studentName, setStudentName] = useState(loggedInStudent?.student_name || "");
+  const [githubUrl, setGithubUrl] = useState(loggedInStudent?.githubUrl || "");
+  const [linkedinUrl, setLinkedinUrl] = useState(loggedInStudent?.linkedinUrl || "");
+  const [selectedAvatar, setSelectedAvatar] = useState(loggedInStudent?.avatarUrl || "");
   const studentId = routeStudentId || loggedInStudentId;  
   const [submittedProjects, setSubmittedProjects] = useState([]);
   const [submittedGroupProjects, setSubmittedGroupProjects] = useState([]);
   const [student, setStudent] = useState(routeStudentId ? null : loggedInStudent);
-    const isOwnProfile =Number(studentId) === Number(loggedInStudentId);
+    const isOwnProfile = !isReviewer && Number(studentId) === Number(loggedInStudentId);
   const navigate = useNavigate();
 
+    const [showLinksModal, setShowLinksModal] = useState(false);
+
+    const fetchData = async (id) => {
+    try {
+        const [
+        projectRes,
+        groupProjectRes,
+        collaborationRes,
+        applicationRes,
+        ] = await Promise.all([
+        authenticatedAxiosInstance.get(`/project/student/${id}`, profileAuth),
+        authenticatedAxiosInstance.get(`/groupProject/student/${id}`, profileAuth),
+        authenticatedAxiosInstance.get(`/collaboration/student/${id}`, profileAuth),
+        Number(id) === Number(loggedInStudentId) && !isReviewer
+            ? authenticatedAxiosInstance.get("/collabapplication/mine", profileAuth)
+            : Promise.resolve({ data: [] }),
+        ]);
+
+        let pendingProjectRes = { data: [] };
+        let pendingGroupProjectRes = { data: [] };
+
+        if (isOwnProfile) {
+            [pendingProjectRes, pendingGroupProjectRes] = await Promise.all([
+                authenticatedAxiosInstance.get("/project/my-pending", profileAuth),
+                authenticatedAxiosInstance.get("/groupProject/my-pending", profileAuth),
+            ]);
+        }
+
+        setProjects(projectRes.data);
+        setGroupProjects(groupProjectRes.data);
+        setSubmittedProjects(pendingProjectRes.data);
+        setSubmittedGroupProjects(pendingGroupProjectRes.data);
+        setCollaborations(collaborationRes.data);
+        setApplications(applicationRes.data);
+    } catch {
+        toast.error("Something went wrong.");
+    }
+    };
     useEffect(() => {
     const loadProfile = async () => {
         const id = routeStudentId || loggedInStudentId;
@@ -44,8 +84,13 @@ const Profile = () => {
         
         if (routeStudentId) {
         try {
-            const res = await authenticatedAxiosInstance.get(`/student/getById/${routeStudentId}`);
+            const res = await authenticatedAxiosInstance.get(`/student/getById/${routeStudentId}`, profileAuth);
             setStudent(res.data);
+            setStudentName(res.data.student_name || "");
+            setGithubUrl(res.data.githubUrl || "");
+            setLinkedinUrl(res.data.linkedinUrl || "");
+            setSelectedAvatar(res.data.avatarUrl ||
+              `/avatars/Avatar${(res.data.studentId % 40) + 1}.webp`);
         } catch (err) {
             console.error(err);
             toast.error("Something went wrong. Please try again.");
@@ -58,50 +103,7 @@ const Profile = () => {
     loadProfile();
     }, [routeStudentId]);
 
-  useEffect(() => {
-  if (student) {
-    setStudentName(student.student_name || "");
-    setGithubUrl(student.githubUrl || "");
-    setLinkedinUrl(student.linkedinUrl || "");
-    setSelectedAvatar(student.avatarUrl ||`/avatars/Avatar${(student.studentId % 40) + 1}.webp`);}
-  }, [student]);
 
-    const [showLinksModal, setShowLinksModal] = useState(false);
-
-    const fetchData = async (id) => {
-    try {
-        const [
-        projectRes,
-        groupProjectRes,
-        collaborationRes,
-        applicationRes,
-        ] = await Promise.all([
-        authenticatedAxiosInstance.get(`/project/student/${id}`),
-        authenticatedAxiosInstance.get(`/groupProject/student/${id}`),
-        authenticatedAxiosInstance.get(`/collaboration/student/${id}`),
-        authenticatedAxiosInstance.get(`/collabapplication/student/${id}`),
-        ]);
-
-        let pendingProjectRes = { data: [] };
-        let pendingGroupProjectRes = { data: [] };
-
-        if (Number(id) === Number(loggedInStudentId)) {
-            [pendingProjectRes, pendingGroupProjectRes] = await Promise.all([
-                authenticatedAxiosInstance.get("/project/my-pending"),
-                authenticatedAxiosInstance.get("/groupProject/my-pending"),
-            ]);
-        }
-
-        setProjects(projectRes.data);
-        setGroupProjects(groupProjectRes.data);
-        setSubmittedProjects(pendingProjectRes.data);
-        setSubmittedGroupProjects(pendingGroupProjectRes.data);
-        setCollaborations(collaborationRes.data);
-        setApplications(applicationRes.data);
-    } catch (err) {
-        toast.error("Something went wrong.");
-    }
-    };
     const openDeleteModal = (id, type) => {
     setSelectedProjectId(id);
     setDeleteType(type);
@@ -114,7 +116,7 @@ const Profile = () => {
         localStorage.setItem("student",JSON.stringify(res.data));
         setShowLinksModal(false);
         window.location.reload();
-    } catch (error) {
+    } catch {
         toast.error("Something went wrong. Please try again.");}
     };
 
@@ -128,7 +130,7 @@ const Profile = () => {
                 setGroupProjects(prev =>prev.filter(p => p.groupProjectId !== selectedProjectId));
             }
             setShowDeleteModal(false);
-        } catch (error) {
+        } catch {
             toast.error("Something went wrong. Please try again.");
         }
     };
@@ -168,7 +170,9 @@ return (
                         />
                         <div className="text-white">
                             <h2 className="text-2xl sm:text-3xl lg:text-4xl font-bold">{student.student_name}</h2>
-                            <p className="text-slate-300 mt-2">{student.studentEmail}</p>
+                            {isOwnProfile && loggedInStudent?.studentEmail && (
+                                  <p className="text-slate-300 mt-2">{loggedInStudent.studentEmail}</p>
+                                )}
                             <div className="flex flex-wrap justify-center sm:justify-start items-center gap-4 mt-3">
                                 {student.githubUrl ? (
                                     <a href={student.githubUrl} target="_blank" rel="noopener noreferrer"className="text-white hover:text-cyan-300">
@@ -229,7 +233,7 @@ return (
             </div>
         </div>
 
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 lg:gap-6 mt-12">
+        <div className={`grid grid-cols-2 ${isOwnProfile ? "lg:grid-cols-4" : "lg:grid-cols-3"} gap-4 lg:gap-6 mt-12`}>
             <div className="bg-white/10 backdrop-blur-xl border border-white/10  p-6 hover:-translate-y-2 duration-300">
                 <p className="text-slate-400">My Solo Projects</p>
                 <h2 className="text-3xl sm:text-4xl lg:text-5xl font-black text-white mt-3">{projects.length}</h2>
@@ -242,10 +246,12 @@ return (
                 <p className="text-slate-400">My Teams</p>
                 <h2 className="text-3xl sm:text-4xl lg:text-5xl font-black text-white mt-3"> {collaborations.length}</h2>
             </div>
+            {isOwnProfile && (
             <div className="bg-white/10 backdrop-blur-xl border border-white/10 p-6 hover:-translate-y-2 duration-300">
                 <p className="text-slate-400">Applications Sent</p>
                 <h2 className="text-3xl sm:text-4xl lg:text-5xl font-black text-white mt-3"> {applications.length}</h2>
             </div>
+            )}
         </div>
         {isOwnProfile && (
         <div onClick={() => navigate("/submitProject")}

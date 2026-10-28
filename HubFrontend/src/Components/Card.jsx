@@ -11,13 +11,12 @@ import ProjectDiscussion from "./ProjectDiscussion/ProjectDiscussion"
 
 const Card = ({ project }) => {
 
-  const studentId = Number(localStorage.getItem("studentId"))
   const isReviewer = !!localStorage.getItem("reviewerToken");
   const isStudent = !!localStorage.getItem("token");
 
   const [discussionOpen, setDiscussionOpen] = useState(false);
   const [discussionCount, setDiscussionCount] = useState(project.discussionCount || 0);
-  const [liked, setLiked] = useState(project.likes?.some((like) =>Number(like.likedStudentId) === Number(studentId)) || false);
+  const [liked, setLiked] = useState(Boolean(project.isLiked));
   const [like, setLike] = useState(project.likeCount || 0);
   const navigate = useNavigate();
 
@@ -56,7 +55,7 @@ const Card = ({ project }) => {
       if (window.gtag) {
         window.gtag("event", "project_like");
       }
-    } catch (err) { toast.error("Something went wrong. Please try again.");}
+    } catch { toast.error("Something went wrong. Please try again.");}
   };
   const handleProfileClick = () => {
     const id = project.type === "GROUP"? project.teamLead?.studentId: project.student?.studentId;

@@ -27,7 +27,6 @@ const Leaderboard = () => {
         return true;
     };
 
-    const [topFaculty, setTopFaculty] = useState([]);
 
     {/*useEffect(() => {
         axiosInstance.get("/reviewer/review/top-three")
@@ -40,7 +39,7 @@ const Leaderboard = () => {
             try {
                 const res = await axiosInstance.get("/leaderboard");
                 setLeaderboard(res.data);
-            } catch (err) {
+            } catch {
                 toast.error("Something went wrong. Please try again.");
             }
         };

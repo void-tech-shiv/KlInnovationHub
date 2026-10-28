@@ -1,15 +1,15 @@
 import { useEffect, useState } from "react";
 import { AlertTriangle, Flag, Loader2, X } from "lucide-react";
 
-const ReportModal = ({ open, type = "discussion", onClose, onSubmit, submitting = false }) => {
+const ReportModal = ({ open, ...props }) => (
+  open ? <ReportModalContent {...props} /> : null
+);
+
+const ReportModalContent = ({ type = "discussion", onClose, onSubmit, submitting = false }) => {
+  // The form unmounts when closed, so its state naturally resets on reopen.
   const [reason, setReason] = useState("");
 
   useEffect(() => {
-    if (open) setReason("");
-  }, [open]);
-
-  useEffect(() => {
-    if (!open) return;
     const handleKeyDown = (event) => {
       if (event.key === "Escape" && !submitting) {
         onClose();
@@ -17,9 +17,8 @@ const ReportModal = ({ open, type = "discussion", onClose, onSubmit, submitting 
     };
     document.addEventListener("keydown", handleKeyDown);
     return () => document.removeEventListener("keydown", handleKeyDown);
-  }, [open, submitting, onClose]);
+  }, [submitting, onClose]);
 
-  if (!open) return null;
   const label = type === "reply" ? "reply" : "discussion";
   const handleSubmit = async (event) => {
     event.preventDefault();

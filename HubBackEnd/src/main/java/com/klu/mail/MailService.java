@@ -1,5 +1,4 @@
 package com.klu.mail;
-import java.security.SecureRandom;
 import java.time.LocalDateTime;
 import java.util.Optional;
 
@@ -12,11 +11,14 @@ import org.springframework.security.authentication.UsernamePasswordAuthenticatio
 import org.springframework.security.core.Authentication;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import com.klu.dto.LoginRequestDto;
 import com.klu.model.Student;
 import com.klu.repository.StudentRepo;
 import com.klu.security.JwtService;
+import com.klu.security.OtpSecurityService;
+import com.klu.security.OtpSecurityService.Purpose;
 import com.klu.security.ratelimit.LoginRateLimiterService;
 import com.klu.security.ratelimit.PasswordResetRateLimiterService;
 import com.klu.service.implementation.StudentImple;
@@ -49,7 +51,7 @@ public class MailService {
 	
 	@Autowired JwtService jwtService;
 	
-	private final SecureRandom secureRandom = new SecureRandom();
+	@Autowired private OtpSecurityService otpSecurity;
 	private static final String PASSWORD_REGEX ="^(?=.*[A-Z])(?=.*[a-z])(?=.*\\d).{8,64}$";
 	private static final java.util.Set<String> STUDENT_DOMAINS = java.util.Set.of(
 			"AI/ML", "Data Science", "Web Development", "Mobile App Development", "Cloud Computing",
@@ -60,23 +62,39 @@ public class MailService {
         this.authenticationManager = authenticationManager;
     }
 	
+	@Transactional
 	public String generateOtp(String name,String toMail,String password,String interestedDomain) {
-		if (!toMail.matches("\\d{10}@kluniversity\\.in")){
+		if (toMail == null || !toMail.matches("\\d{10}@kluniversity\\.in")){
 		    return "Use Kl University email";
 		}
-		Optional<UserSignUp> existingUser = repo.findByMail(toMail);
+		Optional<UserSignUp> existingUser = repo.findLockedByMail(toMail);
 
-		if (existingUser.isPresent() && existingUser.get().isVerified()) {
-		    return "User already exists. Please login.";
-		}
-		if(!password.matches(PASSWORD_REGEX)) {
+        if (existingUser.isPresent()
+                && !"ROLE_STUDENT".equals(existingUser.get().getRole())) {
+            return "User already exists. Please login.";
+        }
+        if (existingUser.isPresent() && existingUser.get().isVerified()) {
+            return "User already exists. Please login.";
+        }
+		if(password == null || !password.matches(PASSWORD_REGEX)) {
 		    return "Password does not meet security requirements";
 		}
 		if (interestedDomain == null || !STUDENT_DOMAINS.contains(interestedDomain)) {
 		    return "Select a valid interested domain";
 		}
-		int otpnum = secureRandom.nextInt(9000) + 1000;
-		SimpleMailMessage msg = new SimpleMailMessage();
+        if (!passwordResetRateLimiterService.tryRequest(toMail).isAllowed()) {
+            return "Too many OTP requests. Please try again later.";
+        }
+        UserSignUp user = existingUser.orElseGet(UserSignUp::new);
+        user.setName(name);
+        user.setMail(toMail);
+        user.setPassword(passwordEncoder.encode(password));
+        user.setRole("ROLE_STUDENT");
+        user.setInterestedDomain(interestedDomain);
+        user.setVerified(false);
+        int otpnum = otpSecurity.issue(user, Purpose.STUDENT_SIGNUP);
+        repo.save(user);
+        SimpleMailMessage msg = new SimpleMailMessage();
 		msg.setTo(toMail);
 		msg.setSubject("Verify Your Email • KL Innovation Hub");
 		msg.setText(
@@ -104,45 +122,35 @@ public class MailService {
 			"Build • Collaborate • Innovate"
 		);
 		sender.send(msg);
-		UserSignUp user;
-	    if (existingUser.isPresent()) {
-	        user = existingUser.get();
-	    } else {
-	        user = new UserSignUp();
-	    }
-		user.setOtpTimeOut(LocalDateTime.now());
-		user.setName(name);
-		user.setMail(toMail);
-		user.setOtp(otpnum);
-		user.setPassword(passwordEncoder.encode(password));
-		user.setRole("ROLE_STUDENT");
-		user.setInterestedDomain(interestedDomain);
-		user.setVerified(false);
-		repo.save(user);		
 		return "If the email exists, OTP has been sent";
 	}
 
-	public String verifyOtp(String mail,int recOtp) {
-	    UserSignUp recMail = repo.findByMail(mail).orElseThrow(() -> new RuntimeException("Mail Not Found")); 
-	    LocalDateTime time = recMail.getOtpTimeOut();
-	    if(time.plusMinutes(3).isBefore(LocalDateTime.now())) {
-	        return "Otp Request TimeOut";
-	    }
-	    if(recMail.getOtp() != recOtp) {
-	        return "Invalid Otp";
-	    }
-	    try {
-	        studentService.CreateStudentByEmail(recMail.getMail(),recMail.getName(),recMail.getInterestedDomain());
-	        recMail.setVerified(true);
-	        recMail.setOtp(0);
-	        recMail.setOtpTimeOut(null);
-	        repo.save(recMail);
-	        return "Verified You Can SignIn Now";
-	    }catch(RuntimeException e) {
-	        return e.getMessage();
-	    }
-	}
-	
+    @Transactional
+    public String verifyOtp(String mail, int recOtp) {
+        UserSignUp account = repo.findLockedByMail(mail).orElse(null);
+        if (account == null || !"ROLE_STUDENT".equals(account.getRole())) {
+            return "OTP Expired";
+        }
+        if (account.isVerified()) {
+            return "User already verified";
+        }
+        String error = otpSecurity.check(account, recOtp, Purpose.STUDENT_SIGNUP);
+        if (error != null) {
+            repo.save(account);
+            return error;
+        }
+        try {
+            studentService.CreateStudentByEmail(account.getMail(), account.getName(),
+                    account.getInterestedDomain());
+            account.setVerified(true);
+            otpSecurity.invalidate(account);
+            repo.save(account);
+            return "Verified You Can SignIn Now";
+        } catch (RuntimeException ex) {
+            return ex.getMessage();
+        }
+    }
+
 	public LoginRequestDto login(Login req) {
 		
 		UserSignUp recMail = repo.findByMail(req.getMail()).orElse(null);
@@ -181,28 +189,23 @@ public class MailService {
 		return new LoginRequestDto("Welcome To DashBoard",s,s.getStudentId(),s.getStudentEmail(),token);
 	}
 
-	public String reSend(String mail) {
-		
-		UserSignUp recMail = repo.findByMail(mail).orElse(null);
-		
-		if(recMail==null) {
-			return "Mail Not Found";
-		}
-		
-		if (!recMail.getMail().endsWith("@kluniversity.in")) {
-		    return "Use valid university email";
-		}
-		if(recMail.isVerified()) {
-		    return "User already verified";
-		}
-		
-		LocalDateTime time = recMail.getOtpTimeOut();		
-		if(LocalDateTime.now().isBefore(time.plusMinutes(3))) {
-		    return "Wait 3 minutes before resending a verification email";
-		}
-			
-		int otpnum = secureRandom.nextInt(9000) + 1000;
-		
+    @Transactional
+    public String reSend(String mail) {
+        if (mail == null) return "Mail Not Found";
+        UserSignUp account = repo.findLockedByMail(mail).orElse(null);
+        if (account == null) return "Mail Not Found";
+        if (!"ROLE_STUDENT".equals(account.getRole())) return "Invalid account";
+        if (account.isVerified()) return "User already verified";
+
+        LocalDateTime issuedAt = account.getOtpTimeOut();
+        if (issuedAt != null && LocalDateTime.now().isBefore(issuedAt.plusMinutes(3))) {
+            return "Wait 3 minutes before resending a verification email";
+        }
+        if (!passwordResetRateLimiterService.tryRequest(mail).isAllowed()) {
+            return "Too many OTP requests. Please try again later.";
+        }
+        int otpnum = otpSecurity.issue(account, Purpose.STUDENT_SIGNUP);
+        repo.save(account);
 		SimpleMailMessage msg = new SimpleMailMessage();
 		msg.setTo(mail);
 		msg.setSubject("Your New Verification Code • KL Innovation Hub");
@@ -225,20 +228,16 @@ public class MailService {
 			"KL Innovation Hub"
 		);
 	
-		sender.send(msg);
-		
-		recMail.setOtp(otpnum);
-		recMail.setOtpTimeOut(LocalDateTime.now());
-		repo.save(recMail);
-		
-		return "Check your inbox for otp";
-	}
-	
+        sender.send(msg);
+        return "Check your inbox for otp";
+    }
+
+	@Transactional
 	public String forgotPassword(String mail) {
 
-	    UserSignUp user = repo.findByMail(mail).orElse(null);
+	    UserSignUp user = mail == null ? null : repo.findLockedByMail(mail).orElse(null);
 
-	    if(user == null) {
+	    if(user == null || !"ROLE_STUDENT".equals(user.getRole())) {
 	        return "Mail Not Found";
 	    }
 	    if(!user.isVerified()) {
@@ -251,7 +250,8 @@ public class MailService {
 	        return "Too many password reset requests. Please try again later.";
 	    }
 
-	    int otp = secureRandom.nextInt(9000) + 1000;
+	    int otp = otpSecurity.issue(user, Purpose.PASSWORD_RESET);
+        repo.save(user);
 
 	    SimpleMailMessage msg = new SimpleMailMessage();
 	    msg.setTo(mail);
@@ -281,59 +281,40 @@ public class MailService {
 
 	    sender.send(msg);
 
-	    user.setOtp(otp);
-	    user.setOtpTimeOut(LocalDateTime.now());
-	    user.setResetOtpVerified(false);
-
-	    repo.save(user);
-
 	    return "OTP Sent";
 	}
 	
-	public String verifyResetOtp(String mail,int otp) {
-	    UserSignUp user = repo.findByMail(mail).orElse(null);
-	    if(user == null) {
-	        return "Mail Not Found";
-	    }
-	    if(user.getOtpTimeOut() == null ||
-		   user.getOtpTimeOut().plusMinutes(3).isBefore(LocalDateTime.now())) {
-		    return "OTP Expired";
-		}
-	    if(user.getOtp() != otp) {
-	        PasswordResetRateLimiterService.OtpAttemptResult attempt =passwordResetRateLimiterService.recordFailedOtpAttempt(mail);
-	        if (!attempt.isAllowed()) {
-	            user.setOtp(0);
-	            user.setOtpTimeOut(null);
-	            repo.save(user);
-	            return "Too many invalid OTP attempts. Request a new OTP.";
-	        }
-	        return "Invalid OTP";
-	    }
-	    passwordResetRateLimiterService.resetFailedOtpAttempts(mail);
-	    user.setResetOtpVerified(true);
-	    repo.save(user);
-	    return "OTP Verified";
-	}
-	
-	public String resetPassword(String mail,String newPassword) {
+    @Transactional
+    public String verifyResetOtp(String mail, int otp) {
+        UserSignUp user = mail == null ? null : repo.findLockedByMail(mail).orElse(null);
+        if (user == null || !"ROLE_STUDENT".equals(user.getRole()) || !user.isVerified()) {
+            return "OTP Expired";
+        }
+        String error = otpSecurity.check(user, otp, Purpose.PASSWORD_RESET);
+        if (error != null) {
+            repo.save(user);
+            return error;
+        }
+        otpSecurity.verifiedForPasswordReset(user);
+        repo.save(user);
+        return "OTP Verified";
+    }
 
-	    UserSignUp user = repo.findByMail(mail).orElse(null);
-	    if(user == null) {
-	        return "Mail Not Found";
-	    }
-	    if(!newPassword.matches(PASSWORD_REGEX)) {
-	        return "Password does not meet security requirements";
-	    }
-
-	    if(!user.isResetOtpVerified()) {
-	        return "Verify OTP First";
-	    }
-
-	    user.setPassword(passwordEncoder.encode(newPassword));
-	    user.setOtp(0);
-	    user.setResetOtpVerified(false);
-	    user.setOtpTimeOut(null);
-	    repo.save(user);
-	    return "Password Updated Successfully";
-	}
+    @Transactional
+    public String resetPassword(String mail, String newPassword) {
+        UserSignUp user = mail == null ? null : repo.findLockedByMail(mail).orElse(null);
+        if (user == null || !"ROLE_STUDENT".equals(user.getRole()) || !user.isVerified()) {
+            return "Mail Not Found";
+        }
+        if (newPassword == null || !newPassword.matches(PASSWORD_REGEX)) {
+            return "Password does not meet security requirements";
+        }
+        if (!otpSecurity.canResetPassword(user)) {
+            return "Verify OTP First";
+        }
+        user.setPassword(passwordEncoder.encode(newPassword));
+        otpSecurity.invalidate(user);
+        repo.save(user);
+        return "Password Updated Successfully";
+    }
 }

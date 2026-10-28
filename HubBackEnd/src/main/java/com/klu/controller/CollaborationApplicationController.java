@@ -13,7 +13,8 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.klu.dto.CollabApplyRequest;
-import com.klu.model.CollabApplication;
+import com.klu.dto.PublicCollabApplicationDto;
+import com.klu.service.CurrentUserService;
 import com.klu.service.implementation.CollabApplicationImple;
 
 
@@ -25,22 +26,32 @@ public class CollaborationApplicationController {
     @Autowired
     CollabApplicationImple collabApplicationService;
 
+    @Autowired
+    CurrentUserService currentUser;
+
     @PostMapping("/apply")
     public String createCollabApplication(@RequestBody CollabApplyRequest request) {
         return collabApplicationService.createCollabApplication(request.getCollaborationId());
     }
     
-    @GetMapping("/all")
-    public List<CollabApplication> getAllCollabApplications() {
-        return collabApplicationService.getAllCollabApplications();
+    // Legacy /all route remains valid, but only returns applications for owned teams.
+    @GetMapping({"/all", "/owned"})
+    public List<PublicCollabApplicationDto> getApplicationsForOwnedTeams() {
+        return collabApplicationService.getApplicationsForOwnedTeams();
     }
-    
-    @GetMapping("/student/{id}")
-    public List<CollabApplication> getMyApplications(@PathVariable Long id){
 
+    @GetMapping("/mine")
+    public List<PublicCollabApplicationDto> getCurrentStudentApplications() {
+        return collabApplicationService.getMyApplications(
+                currentUser.getCurrentStudent().getStudentId());
+    }
+
+    // Legacy URL retained; the service rejects access to another user's applications.
+    @GetMapping("/student/{id}")
+    public List<PublicCollabApplicationDto> getMyApplications(@PathVariable Long id) {
         return collabApplicationService.getMyApplications(id);
     }
-    
+
     @PatchMapping("/updateStatus/{id}")
     public String updateApplicationStatus(@PathVariable Integer id,@RequestParam String status) {
         return collabApplicationService.updateApplicationStatus(id, status);

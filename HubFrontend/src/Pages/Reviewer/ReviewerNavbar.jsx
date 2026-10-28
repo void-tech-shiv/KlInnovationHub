@@ -1,14 +1,14 @@
 import { memo, useState } from "react";
 import { FaBars, FaTimes, FaUserCircle } from "react-icons/fa";
 import { Link, NavLink, useNavigate } from "react-router-dom";
+import { clearRoleSession } from "../../Api/sessionAuth";
 
 const ReviewerNavbar = () => {
   const navigate = useNavigate();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   const handleLogout = () => {
-    localStorage.removeItem("reviewerToken");
-    localStorage.removeItem("reviewer");
+    clearRoleSession("reviewer");
     navigate("/login");
   };
 

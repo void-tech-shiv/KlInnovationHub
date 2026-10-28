@@ -42,8 +42,8 @@ const ReviewerForgotPassword = () => {
   const verifyOtp = async () => {
     setError("");
     setMessage("");
-    if (otp.length !== 4) {
-      setError("Enter the 4 digit OTP");
+    if (otp.length !== 6) {
+      setError("Enter the 6 digit OTP");
       return;
     }
     try {
@@ -127,10 +127,10 @@ const ReviewerForgotPassword = () => {
             <input
               type="text"
               inputMode="numeric"
-              maxLength={4}
+              maxLength={6}
               value={otp}
-              onChange={(e) => setOtp(e.target.value.replace(/\D/g, ""))}
-              placeholder="4 digit OTP"
+              onChange={(e) => setOtp(e.target.value.replace(/\D/g, "").slice(0, 6))}
+              placeholder="6 digit OTP"
               className="w-full p-3 rounded-xl bg-white/10 border border-white/20 text-white outline-none"
             />
             <button onClick={verifyOtp} disabled={loading} className="bg-green-600 text-white font-bold py-3 rounded-xl disabled:opacity-50">

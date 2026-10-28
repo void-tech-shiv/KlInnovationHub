@@ -72,7 +72,7 @@ const SignUp = () => {
             toast.error("Passwords do not match");
         }
     }catch(err){
-      toast.error("Unable to send OTP");
+      toast.error(typeof err.response?.data === "string" ? err.response.data : "Unable to send OTP");
     }
     finally{
       setLoading(false);
@@ -82,7 +82,7 @@ const SignUp = () => {
     const [check,setCheck] = useState(false)
 
     const handleOtp =(e) => {
-      setVerify(prev => ({...prev,otp: e.target.value}));
+      setVerify(prev => ({...prev,otp: e.target.value.replace(/\D/g, "").slice(0, 6)}));
     }
 
     const [verify, setVerify] = useState({ mail: "", otp: "" });
@@ -234,11 +234,11 @@ return (
 
         {otpSent && !check && (
           <div className="mt-5 flex gap-3">
-            <input onChange={handleOtp} value={verify.otp} placeholder="Enter OTP"
+            <input onChange={handleOtp} value={verify.otp} placeholder="Enter 6-digit OTP" inputMode="numeric" maxLength={6}
               className="flex-1 p-3 rounded-xl bg-white/10 border border-gray-400 text-black placeholder-gray-400 outline-none"
             />
             <button className="bg-primary text-tan font-bold px-6 rounded-xl hover:scale-[1.02] transition disabled:cursor-not-allowed disabled:opacity-50"
-              type="button" onClick={handleVerify} disabled={verify.otp.length !== 4}
+              type="button" onClick={handleVerify} disabled={verify.otp.length !== 6}
             >
               Verify
             </button>

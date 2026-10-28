@@ -1,0 +1,134 @@
+name: Security validation (no deployment)
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches:
+      - audit/**
+      - fix/security-*
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: security-validation-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  frontend:
+    name: Frontend build and auth regressions
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: HubFrontend
+    steps:
+      - uses: actions/checkout@v4
+      - name: Node.js 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: HubFrontend/package-lock.json
+      - name: Install locked dependencies
+        run: npm ci
+      - name: Role isolation tests
+        run: npm run test:auth
+      - name: Production frontend build
+        run: npm run build
+
+  frontend-lint:
+    name: Frontend ESLint
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: HubFrontend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: HubFrontend/package-lock.json
+      - run: npm ci
+      - run: npm run lint
+
+  backend:
+    name: Backend compile, unit and context tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    services:
+      mysql:
+        image: mysql:8.4
+        env:
+          MYSQL_ROOT_PASSWORD: integration_test_root_only
+          MYSQL_DATABASE: hub_integration_test
+          MYSQL_USER: hub_test
+          MYSQL_PASSWORD: integration_test_only
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mysqladmin ping -h 127.0.0.1 -u root -pintegration_test_root_only"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=15
+    defaults:
+      run:
+        working-directory: HubBackEnd
+    env:
+      DB_URL: jdbc:mysql://127.0.0.1:3306/hub_integration_test?useSSL=false&allowPublicKeyRetrieval=true
+      DB_USERNAME: hub_test
+      DB_PASSWORD: integration_test_only
+      DDL_AUTO: create-drop
+      JWT_SECRET: 0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef
+      JWT_EXPIRATION_MS: '3600000'
+      FRONTEND_URL: http://localhost:5173
+      MAIL_USERNAME: integration-test@example.invalid
+      MAIL_PASSWORD: integration_test_only
+    steps:
+      - uses: actions/checkout@v4
+      - name: Java 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+          cache: maven
+          cache-dependency-path: HubBackEnd/pom.xml
+      - name: Run full Maven test suite (including Spring context)
+        run: mvn -B -ntp --no-transfer-progress test
+      - name: Package (tests must not be silently skipped)
+        run: mvn -B -ntp --no-transfer-progress -DskipTests=false package
+
+  production-transport:
+    name: Production HTTPS transport gate
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Reject plaintext production API URLs
+        run: node HubFrontend/scripts/check-production-env.mjs
+
+  production-dependencies:
+    name: Production npm dependency advisories
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: HubFrontend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: HubFrontend/package-lock.json
+      - run: npm ci
+      - name: Reject high or critical production dependency vulnerabilities
+        run: npm audit --omit=dev --audit-level=high
+

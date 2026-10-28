@@ -9,7 +9,6 @@ const FormATeam = () => {
 
     const [formData, setFormData] = useState({name: "",problemStatement: "",description: "",teamSize: "",skill1: "",skill2: "",skill3: "",linkedIn: "",status: true});
     const [errorMsg, setErrorMsg] = useState("");
-    const [isSubmitted, setIsSubmitted] = useState(false);
     const [loading,setLoading] = useState(false);
     const [successMsg,setSuccessMsg] = useState("");
 
@@ -57,16 +56,14 @@ const FormATeam = () => {
       if(loading) return;
       setLoading(true);
       try {
-          const studentId = localStorage.getItem("studentId");
           await axiosInstance.post(`/collaboration/create`,formData);
           setSuccessMsg("Team created successfully. Redirecting to dashboard...");
-          setIsSubmitted(true);
           setFormData({name:"",problemStatement:"", description:"", teamSize:"",skill1:"", skill2:"",skill3:"", linkedIn:"", status:true});
           if (window.gtag) {
             window.gtag("event", "team_created");
           }
           setTimeout(() => { navigate("/dashboard");},1500);
-      } catch(error) {
+      } catch {
           toast.error("Something went wrong. Please try again.");
           setErrorMsg("Failed to create collaboration");
       } finally {

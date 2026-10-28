@@ -25,19 +25,16 @@ public class MailController {
 	MailService service;
 	
 	@PostMapping("/generateOtp")
-	public String generateOtp(@RequestBody SignUpFormDto form) {
-		String name = form.getName();
-		String toMail = form.getMail();
-		String password = form.getPassword();
-		return service.generateOtp(name, toMail, password, form.getInterestedDomain());
-	}
+	public ResponseEntity<String> generateOtp(@RequestBody SignUpFormDto form) {
+        String result = service.generateOtp(form.getName(), form.getMail(),
+                form.getPassword(), form.getInterestedDomain());
+        return otpResponse(result);
+    }
 	
 	@PostMapping("/verifyOtp")
-	public String verifyOtp(@RequestBody VerifyOtpDto dto) {
-		String mail = dto.getMail();
-		int otp = dto.getOtp();
-		return service.verifyOtp(mail,otp);
-	}
+	public ResponseEntity<String> verifyOtp(@RequestBody VerifyOtpDto dto) {
+        return otpResponse(service.verifyOtp(dto.getMail(), dto.getOtp()));
+    }
 	
 	@PostMapping("/login")
 	public ResponseEntity<LoginRequestDto> login(@RequestBody Login req) {
@@ -49,9 +46,9 @@ public class MailController {
 	}
 	
 	@PostMapping("/resend")
-	public String reSend(@RequestParam String mail) {
-		return service.reSend(mail);
-	}
+	public ResponseEntity<String> reSend(@RequestParam String mail) {
+        return otpResponse(service.reSend(mail));
+    }
 	
 	@PostMapping("/forgotPassword")
 	public ResponseEntity<String> forgotPassword(@RequestParam String mail) {
@@ -71,8 +68,15 @@ public class MailController {
 	    return ResponseEntity.ok(response);
 	}
 	
-	@PostMapping("/resetPassword")public String resetPassword(@RequestBody ResetPasswordDto dto) {
-	    return service.resetPassword(dto.getMail(),dto.getNewPassword());
-	}
+    @PostMapping("/resetPassword")
+    public String resetPassword(@RequestBody ResetPasswordDto dto) {
+        return service.resetPassword(dto.getMail(), dto.getNewPassword());
+    }
 
+    private ResponseEntity<String> otpResponse(String result) {
+        if (result.startsWith("Too many")) {
+            return ResponseEntity.status(HttpStatus.TOO_MANY_REQUESTS).body(result);
+        }
+        return ResponseEntity.ok(result);
+    }
 }

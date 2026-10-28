@@ -4,7 +4,7 @@ import background from "../../Images/dashboardBg.png";
 import Card from '../../Components/Card';
 import axiosInstance from "../../Api/axiosInstance"
 import TopProjectCard from '../../Components/TopProjectCard';
-import toast, { Toaster } from "react-hot-toast";
+import { Toaster } from "react-hot-toast";
 import DashboardFooter from "../../Components/DashboardFooter";
 import ReviewerNavbar from '../Reviewer/ReviewerNavbar';
 import { getDiscussionCounts } from "../../Api/discussionApi";
@@ -89,7 +89,7 @@ const Dashboard = () => {
         setFollowingProjects(addCounts(formattedFollowingProjects, "INDIVIDUAL"));
         setFollowingGroupProjects(addCounts(formattedFollowingGroupProjects, "GROUP"));
         setFollowingCollaborations(followingCollaborationRes.data || []);
-      } catch (error) {
+      } catch {
         setError("Failed to load projects");
       }
     };
@@ -110,7 +110,6 @@ const Dashboard = () => {
   };
 
   const filteredProjects = [...projects, ...groupProjects].filter(filterFn);
-  const filteredTopProjects = topProjects.filter(filterFn);
   const filteredFollowingProjects = [...followingProjects, ...followingGroupProjects].filter(filterFn);
   const hasFollowingContent =followingCollaborations.length > 0 || filteredFollowingProjects.length > 0;
 

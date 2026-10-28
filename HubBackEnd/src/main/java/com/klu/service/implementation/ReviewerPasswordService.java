@@ -1,13 +1,12 @@
 package com.klu.service.implementation;
 
-import java.security.SecureRandom;
-import java.time.LocalDateTime;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.mail.SimpleMailMessage;
 import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import com.klu.dto.ResetPasswordDto;
 import com.klu.dto.VerifyResetOtpDto;
@@ -15,6 +14,8 @@ import com.klu.mail.UserSignUp;
 import com.klu.mail.UserSignUpRepository;
 import com.klu.model.Reviewer;
 import com.klu.repository.ReviewerRepo;
+import com.klu.security.OtpSecurityService;
+import com.klu.security.OtpSecurityService.Purpose;
 import com.klu.security.ratelimit.PasswordResetRateLimiterService;
 
 @Service
@@ -37,10 +38,11 @@ public class ReviewerPasswordService {
     @Autowired
     private PasswordResetRateLimiterService passwordResetRateLimiterService;
 
-    private final SecureRandom secureRandom = new SecureRandom();
+    @Autowired private OtpSecurityService otpSecurity;
 
+    @Transactional
     public String forgotPassword(String mail) {
-        UserSignUp user = userRepo.findByMail(mail).orElse(null);
+        UserSignUp user = mail == null ? null : userRepo.findLockedByMail(mail).orElse(null);
         if (user == null || !"ROLE_REVIEWER".equals(user.getRole())) {
             return "Reviewer account not found";
         }
@@ -59,7 +61,8 @@ public class ReviewerPasswordService {
             return "Too many password reset requests. Please try again later.";
         }
 
-        int otp = secureRandom.nextInt(9000) + 1000;
+        int otp = otpSecurity.issue(user, Purpose.PASSWORD_RESET);
+        userRepo.save(user);
         SimpleMailMessage message = new SimpleMailMessage();
         message.setTo(mail);
         message.setSubject("Reset Your Reviewer Password • KL Innovation Hub");
@@ -70,79 +73,47 @@ public class ReviewerPasswordService {
                 "This OTP is valid for 3 minutes. If you did not request this, you can ignore this email.\n\n" +
                 "— KL Innovation Hub");
         sender.send(message);
-
-        user.setOtp(otp);
-        user.setOtpTimeOut(LocalDateTime.now());
-        user.setResetOtpVerified(false);
-        userRepo.save(user);
         return "OTP Sent";
     }
 
+    @Transactional
     public String verifyResetOtp(VerifyResetOtpDto request) {
-        UserSignUp user = userRepo.findByMail(request.getMail()).orElse(null);
-        if (user == null || !"ROLE_REVIEWER".equals(user.getRole())) {
+        String mail = request.getMail();
+        UserSignUp user = mail == null ? null : userRepo.findLockedByMail(mail).orElse(null);
+        if (user == null || !"ROLE_REVIEWER".equals(user.getRole()) || !user.isVerified()) {
             return "Reviewer account not found";
         }
-
-        Reviewer reviewer = reviewerRepo.findByUserMail(request.getMail()).orElse(null);
-        if (reviewer == null) {
+        if (reviewerRepo.findByUserMail(mail).isEmpty()) {
             return "Your reviewer account is not approved";
         }
-
-        if (user.getOtpTimeOut() == null || user.getOtpTimeOut().plusMinutes(3).isBefore(LocalDateTime.now())) {
-            return "OTP Expired";
+        String error = otpSecurity.check(user, request.getOtp(), Purpose.PASSWORD_RESET);
+        if (error != null) {
+            userRepo.save(user);
+            return error;
         }
-        if (user.getOtp() != request.getOtp()) {
-
-            PasswordResetRateLimiterService.OtpAttemptResult attempt =
-
-                    passwordResetRateLimiterService.recordFailedOtpAttempt(request.getMail());
-
-            if (!attempt.isAllowed()) {
-
-                user.setOtp(0);
-
-                user.setOtpTimeOut(null);
-
-                userRepo.save(user);
-
-                return "Too many invalid OTP attempts. Request a new OTP.";
-
-            }
-
-            return "Invalid OTP";
-
-        }
-
-
-        passwordResetRateLimiterService.resetFailedOtpAttempts(request.getMail());
-
-        user.setResetOtpVerified(true);
+        otpSecurity.verifiedForPasswordReset(user);
         userRepo.save(user);
         return "OTP Verified";
     }
 
+    @Transactional
     public String resetPassword(ResetPasswordDto request) {
-        UserSignUp user = userRepo.findByMail(request.getMail()).orElse(null);
-        if (user == null || !"ROLE_REVIEWER".equals(user.getRole())) {
+        String mail = request.getMail();
+        UserSignUp user = mail == null ? null : userRepo.findLockedByMail(mail).orElse(null);
+        if (user == null || !"ROLE_REVIEWER".equals(user.getRole()) || !user.isVerified()) {
             return "Reviewer account not found";
         }
-
-        Reviewer reviewer = reviewerRepo.findByUserMail(request.getMail()).orElse(null);
-        if (reviewer == null) {
+        if (reviewerRepo.findByUserMail(mail).isEmpty()) {
             return "Your reviewer account is not approved";
         }
-        if (!request.getNewPassword().matches(PASSWORD_REGEX)) {
+        if (request.getNewPassword() == null || !request.getNewPassword().matches(PASSWORD_REGEX)) {
             return "Password must contain uppercase, lowercase, number, symbol and be at least 10 characters long";
         }
-        if (!user.isResetOtpVerified()) {
+        if (!otpSecurity.canResetPassword(user)) {
             return "Verify OTP First";
         }
-
         user.setPassword(passwordEncoder.encode(request.getNewPassword()));
-        user.setOtp(0);
-        user.setResetOtpVerified(false);
-        user.setOtpTimeOut(null);
+        otpSecurity.invalidate(user);
         userRepo.save(user);
         return "Password Updated Successfully";
     }

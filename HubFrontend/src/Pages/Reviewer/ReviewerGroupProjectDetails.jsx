@@ -32,12 +32,9 @@ const ReviewerGroupProjectDetails = () => {
       setProject(foundProject);
     } catch (error) {
       console.error(error);
-      if (error.response?.status === 401 || error.response?.status === 403) {
-        localStorage.removeItem("reviewerToken");
-        localStorage.removeItem("reviewer");
-        navigate("/reviewer/login");
-        return;
-      }
+      // The role-aware API interceptor handles expired reviewer sessions.
+      // A 403 is an authorization error, not a reason to log out.
+      if (error.response?.status === 401) return;
       toast.error("Unable to load group project");
     } finally {
       setLoading(false);

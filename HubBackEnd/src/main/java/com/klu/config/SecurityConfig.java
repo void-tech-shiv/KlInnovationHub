@@ -39,6 +39,7 @@ public class SecurityConfig {
                         		"/admin/login",
                         		"/reviewer/review/top-three",
                         		"/public/analytics").permitAll()
+                        .requestMatchers("/collabapplication/**").hasRole("STUDENT")
                         .requestMatchers("/admin/reviewers/**","/admin/reports/**").hasRole("ADMIN")
                         .requestMatchers(
                         		"/reviewer/projects/pending/**", 

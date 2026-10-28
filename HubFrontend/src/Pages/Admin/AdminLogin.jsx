@@ -29,7 +29,7 @@ const AdminLogin = () => {
       const response = await adminAxiosInstance.post("/admin/login", {
         mail: form.mail.trim(),
         password: form.password,
-      });
+      }, { skipAuth: true });
 
       const data = response.data;
 
@@ -44,12 +44,16 @@ const AdminLogin = () => {
       toast.success(data.message || "Login successful");
       navigate("/admin/dashboard", { replace: true });
     } catch (error) {
-      console.error("Admin login error:", error);
-      toast.error(
-        error.response?.data?.message ||
-        error.response?.data ||
-        "Invalid admin credentials"
-      );
+      if (error.response?.status === 429) {
+        const retrySeconds = Number(error.response.headers?.["retry-after"]);
+        const message = error.response?.data?.message || "Too many login attempts.";
+        const retryMessage = Number.isFinite(retrySeconds) && retrySeconds > 0
+          ? ` Try again in about ${Math.ceil(retrySeconds / 60)} minute(s).`
+          : "";
+        toast.error(`${message}${retryMessage}`);
+      } else {
+        toast.error(error.response?.data?.message || "Invalid admin credentials");
+      }
     } finally {
       setLoading(false);
     }

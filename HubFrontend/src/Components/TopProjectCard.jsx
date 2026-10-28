@@ -8,11 +8,10 @@ import ProjectDiscussion from "./ProjectDiscussion/ProjectDiscussion";
 
 const TopProjectCard = ({project}) => {
 
-  const studentId = Number(localStorage.getItem("studentId"))
   const isReviewer = !!localStorage.getItem("reviewerToken");
   const isStudent = !!localStorage.getItem("token");
 
-  const [liked, setLiked] = useState(project.likes?.some((like) => like.likedStudentId === studentId));
+  const [liked, setLiked] = useState(Boolean(project.isLiked));
   const [like, setLike] = useState(project.likeCount);
   const [discussionOpen, setDiscussionOpen] = useState(false);
   const [discussionCount, setDiscussionCount] = useState(project.discussionCount || 0);
@@ -54,7 +53,7 @@ const TopProjectCard = ({project}) => {
       if (window.gtag) {
         window.gtag("event", "project_like");
       }
-    } catch (err) {
+    } catch {
       toast.error("Something went wrong. Please try again.");
     }
   };

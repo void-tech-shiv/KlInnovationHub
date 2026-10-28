@@ -18,6 +18,7 @@ const TeamApplications = () => {
   const [allTeams, setAllTeams] = useState([]);
   const [myApplications, setMyApplications] = useState(new Map());
   const [applying, setApplying] = useState(null);
+  const [updatingApplicationId, setUpdatingApplicationId] = useState(null);
 
   const [loading, setLoading] = useState(true);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
@@ -34,8 +35,8 @@ const TeamApplications = () => {
       const [myTeamsRes, allTeamsRes, allAppsRes, myAppsRes] = await Promise.all([
         axiosInstance.get(`/collaboration/student/${studentId}`),
         axiosInstance.get(`/collaboration/all`),
-        axiosInstance.get(`/collabapplication/all`),
-        axiosInstance.get(`/collabapplication/student/${studentId}`),
+        axiosInstance.get(`/collabapplication/owned`),
+        axiosInstance.get(`/collabapplication/mine`),
       ]);
       setMyTeams(myTeamsRes.data);
       setAllApplications(allAppsRes.data);
@@ -44,7 +45,7 @@ const TeamApplications = () => {
       const applicationMap = new Map()
       myAppsRes.data.forEach(app => {applicationMap.set( app.collaboration.collaboration_id,app)});
       setMyApplications(applicationMap)
-    } catch (err) {
+    } catch {
       toast.error("Something went wrong. Please try again.");
     } finally {
       setLoading(false);
@@ -52,21 +53,42 @@ const TeamApplications = () => {
   };
 
   const handleStatusUpdate = async (appId, status) => {
+    if (updatingApplicationId !== null) return;
+    if (status !== "ACCEPTED" && status !== "REJECTED") return;
+    setUpdatingApplicationId(appId);
     try {
-      await axiosInstance.patch(`/collabapplication/updateStatus/${appId}?status=${status}`);
+      await axiosInstance.patch(
+        `/collabapplication/updateStatus/${appId}?status=${encodeURIComponent(status)}`
+      );
+      setAllApplications((prev) => prev.map((app) =>
+        app.collabApplication_id === appId ? { ...app, status } : app
+      ));
       if (status === "ACCEPTED" && window.gtag) {
-          window.gtag("event", "application_accepted");
+        window.gtag("event", "application_accepted");
       }
       if (status === "REJECTED" && window.gtag) {
-          window.gtag("event", "application_rejected");
+        window.gtag("event", "application_rejected");
       }
-      setAllApplications((prev) => prev.map((a) => a.collabApplication_id === appId ? { ...a, status } : a));
     } catch (err) {
-      toast.error("Something went wrong. Please try again.");
+      toast.error(err.response?.data?.message || "Unable to update application status.");
+      if (err.response?.status === 409) {
+        // Another tab or session may have decided the application already.
+        // Reload the canonical status instead of leaving stale action buttons.
+        try {
+          const { data } = await axiosInstance.get("/collabapplication/owned");
+          setAllApplications(data);
+        } catch {
+          // Keep the original conflict message; no unsafe optimistic update.
+        }
+      }
+    } finally {
+      setUpdatingApplicationId(null);
     }
   };
 
   const handleApply = async (team) => {
+    // Client guard improves UX; server-side checks enforce uniqueness.
+    if (applying !== null || myApplications.has(team.collaboration_id)) return;
     try {
       setApplying(team.collaboration_id);
      await axiosInstance.post( "/collabapplication/apply", { collaborationId:team.collaboration_id});
@@ -86,7 +108,19 @@ const TeamApplications = () => {
         return updated
       });
     } catch (err) {
-      toast.error("Something went wrong. Please try again.");
+      toast.error(err.response?.data?.message || "Unable to submit application.");
+      if (err.response?.status === 409) {
+        // Recover the existing status if the application was submitted from
+        // another device or this page was stale.
+        try {
+          const { data } = await axiosInstance.get("/collabapplication/mine");
+          setMyApplications(new Map(
+            data.map((app) => [app.collaboration.collaboration_id, app])
+          ));
+        } catch {
+          // Keep the API's original error visible to the user.
+        }
+      }
     } finally {
       setApplying(null);
     }
@@ -116,7 +150,7 @@ const TeamApplications = () => {
           setMyTeams(prev => prev.filter(team => team.collaboration_id !== selectedTeamId) );
           setShowDeleteModal(false);
           setSelectedTeamId(null);
-      } catch (error) {
+      } catch {
           toast.error("Something went wrong. Please try again.");
       }
   };
@@ -212,10 +246,10 @@ const TeamApplications = () => {
 
                                 {app.status === "PENDING" && (
                                   <>
-                                    <button onClick={(e) =>{e.stopPropagation(); handleStatusUpdate(app.collabApplication_id, "ACCEPTED")}} className="flex items-center gap-1.5 bg-emerald-500/20 hover:bg-emerald-500 text-emerald-300 hover:text-white border border-emerald-500/40 px-4 py-1.5 rounded-full text-xs font-semibold transition-all duration-200">
+                                    <button disabled={updatingApplicationId !== null} onClick={(e) =>{e.stopPropagation(); handleStatusUpdate(app.collabApplication_id, "ACCEPTED")}} className="flex items-center gap-1.5 bg-emerald-500/20 hover:bg-emerald-500 text-emerald-300 hover:text-white border border-emerald-500/40 px-4 py-1.5 rounded-full text-xs font-semibold transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed">
                                       <CheckCircle size={13} /> Accept
                                     </button>
-                                    <button onClick={(e) => {e.stopPropagation(); handleStatusUpdate(app.collabApplication_id, "REJECTED")}} className="flex items-center gap-1.5 bg-red-500/20 hover:bg-red-500 text-red-400 hover:text-white border border-red-500/40 px-4 py-1.5 rounded-full text-xs font-semibold transition-all duration-200">
+                                    <button disabled={updatingApplicationId !== null} onClick={(e) => {e.stopPropagation(); handleStatusUpdate(app.collabApplication_id, "REJECTED")}} className="flex items-center gap-1.5 bg-red-500/20 hover:bg-red-500 text-red-400 hover:text-white border border-red-500/40 px-4 py-1.5 rounded-full text-xs font-semibold transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed">
                                       <XCircle size={13} /> Reject
                                     </button>
                                   </>

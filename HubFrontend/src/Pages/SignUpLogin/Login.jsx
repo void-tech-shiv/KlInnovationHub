@@ -1,6 +1,7 @@
 import { memo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import axiosInstance from "../../Api/axiosInstance";
+import { setActiveProfileRole } from "../../Api/sessionAuth";
 
 const Login = () => {
   const navigate = useNavigate();
@@ -28,11 +29,12 @@ const Login = () => {
     setError("");
     try {
       if (loginType === "student") {
-        const res = await axiosInstance.post("/mail/login",login);
+        const res = await axiosInstance.post("/mail/login", login, { skipAuth: true });
         if (res.data.message === "Welcome To DashBoard") {
           localStorage.setItem("studentId",res.data.studentId);
           localStorage.setItem("student", JSON.stringify(res.data.student));
           localStorage.setItem( "token",res.data.token);
+          setActiveProfileRole("student");
           if (window.gtag) {
             window.gtag("event", "login", {
               method: "email"
@@ -47,11 +49,12 @@ const Login = () => {
       }
 
       else {
-        const response = await axiosInstance.post("/reviewer/login",  login);
+        const response = await axiosInstance.post("/reviewer/login", login, { skipAuth: true });
         if (response.data?.token) {
           localStorage.setItem("reviewerToken", response.data.token);
           localStorage.setItem("reviewerId", response.data.reviewerId);
           localStorage.setItem( "reviewer",JSON.stringify(response.data));
+          setActiveProfileRole("reviewer");
           navigate("/reviewerDashboard");
         } else {
           setError(

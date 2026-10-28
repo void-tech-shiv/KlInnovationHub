@@ -53,7 +53,7 @@ const SubmitProject = () => {
             setGroupProject(prev => ({...prev, studentList: [...prev.studentList, { studentId: parseInt(cleanId) }]}));
             setGroupErrors({});
             setMemberId("");
-        } catch (err) {
+        } catch {
             setGroupErrors({
                 member: "Unable to verify student."
             });

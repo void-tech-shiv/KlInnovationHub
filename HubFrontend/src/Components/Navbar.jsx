@@ -4,6 +4,7 @@ import { Link, NavLink, useNavigate } from "react-router-dom";
 import {useRef, useEffect } from "react";
 import { FaBell } from "react-icons/fa";
 import axiosInstance from "../Api/axiosInstance";
+import { clearRoleSession } from "../Api/sessionAuth";
 import toast, { Toaster } from "react-hot-toast";
 
 
@@ -36,7 +37,7 @@ const Navbar = () => {
       try {
         const res = await axiosInstance.get( "/notification/unreadCount");
         setUnreadCount(res.data);
-      } catch (err) {
+      } catch {
         toast.error("Something went wrong. Please try again.");
       }
     };
@@ -62,7 +63,7 @@ const Navbar = () => {
       setNotifications(notificationRes.data);
       setActivities(activityRes.data);
       setUnreadCount(0);
-    } catch(err) {
+    } catch {
       toast.error("Something went wrong. Please try again.");
     }finally {
       setNotificationsLoading(false);
@@ -119,9 +120,7 @@ const getActivityText = (a) => {
   }
 
   const handleLogout = () => {
-  localStorage.removeItem("studentId");
-  localStorage.removeItem("student");
-  localStorage.removeItem("token");
+  clearRoleSession("student");
   navigate("/");
   };
 

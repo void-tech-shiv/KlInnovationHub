@@ -1,38 +1,33 @@
-import axios from "axios"
+import axios from "axios";
+import { attachRoleToken, clearExpiredRequestSession } from "./sessionAuth";
 
-const axiosInstance = axios.create({baseURL: import.meta.env.VITE_API_URL})
+const axiosInstance = axios.create({ baseURL: import.meta.env.VITE_API_URL });
 
 axiosInstance.interceptors.request.use(
-    (config) => {
-        const token = localStorage.getItem("token")
-
-        if(token) {
-            config.headers.Authorization = `Bearer ${token}`;
-        }
-        return config;
-    },
-    (error) => {
-        return Promise.reject(error);
-    }
+  (config) => attachRoleToken(config, "student"),
+  (error) => Promise.reject(error)
 );
 
-let isLoggingOut = false;
 axiosInstance.interceptors.response.use(
-    response => response,
-    error => {
-
-        const isAuthPage =window.location.pathname === "/login" || window.location.pathname === "/signup";
-        const hadToken = !!localStorage.getItem("token");
-
-        if(!isLoggingOut && hadToken && error.response?.status === 401 && !isAuthPage) {
-            isLoggingOut=true;
-            alert(" Your session has expired.Please login again to continue.");
-            localStorage.clear();
-            window.location.href = "/login";
+  (response) => response,
+  (error) => {
+    if (error.response?.status === 401) {
+      const expiredRole = clearExpiredRequestSession(error.config);
+      if (expiredRole === "student") {
+        const path = window.location.pathname;
+        const needsStudentLogin =
+          path === "/submitProject" ||
+          path === "/formATeam" ||
+          path === "/teamApplications" ||
+          path === "/profile" ||
+          path.startsWith("/profile/");
+        if (needsStudentLogin) {
+          window.location.assign("/login");
         }
-        return Promise.reject(error);
+      }
     }
+    return Promise.reject(error);
+  }
 );
 
 export default axiosInstance;
-
