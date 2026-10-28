@@ -18,17 +18,18 @@ Spring context test using temporary MySQL, and successfully packaged the
 backend. Frontend dependency installation, **10 auth session tests**, and
 Vite production compilation also passed.
 
-The initial ESLint job failed on **47 errors and 10 warnings**. Follow-up
-frontend cleanup reduced this count across repeated CI runs. Commit
-`10541d4` has a green frontend build/auth test job and a green ESLint job
-(with warnings remaining); the backend run on this commit was not yet complete
-at the time of this audit update.
+The initial ESLint job failed with **47 errors and 10 warnings**. Follow-up
+frontend cleanup resolved blocking lint errors; CI now passes ESLint with
+non-blocking React Hook dependency warnings. The backend, frontend build,
+session-auth tests, lint and npm production dependency audit all passed on
+commit `284557b` in [run 40674371225](https://github.com/void-tech-shiv/KlInnovationHub/actions/runs/40674371225).
 
 These successful checks validate compilation and automated tests—not the
 live production API or migrations. Staging manual QA and transport checks
-remain mandatory. The audit branch also adds explicit CI jobs that should
-**fail** until the production API endpoint is configured with verified HTTPS
-and high-severity npm dependency advisories are resolved.
+remain mandatory. The production HTTPS gate **fails deliberately** because
+the committed production API URL uses plaintext HTTP. The npm advisory gate
+initially found nine high-severity advisories, all remediated in the audited
+lockfile and verified by the subsequent green audit job.
 
 
 
@@ -47,12 +48,12 @@ and high-severity npm dependency advisories are resolved.
 |---|---|---|---|
 | B-01 | Critical | `HubFrontend/.env.production` points the client API at an **HTTP** Elastic Beanstalk URL. Bearer tokens must not be sent over plaintext. | Provision and verify an HTTPS API endpoint, update `VITE_API_URL`, enforce HTTP->HTTPS, and test requests in browser DevTools. Do not guess the HTTPS hostname or certificate. |
 | B-02 | High | `HubBackEnd/src/main/resources/application.properties` defaults `DDL_AUTO` to `update`; #06 declares a unique constraint on applications. Legacy duplicates or mapping changes can prevent the next startup. | Back up production DB, inspect actual table/column names, remove duplicate rows with owner-approved status selection, apply a *versioned* reviewed migration, and use `DDL_AUTO=validate` or `none` for deployment. |
-| B-03 | High | The fork originally set Maven Surefire `<skipTests>true</skipTests>`. | Tests must run and pass in CI. This audit branch changes it to false and adds a validation workflow; a green package build alone is not proof of tests unless test reports exist. |
+| B-03 | Resolved | The fork originally set Maven Surefire `<skipTests>true</skipTests>`. | Now `false`; actual CI logs confirm 41 backend tests executed with no failures/skips and a successful package. |
 | B-04 | High | `AdminLoginRateLimiterService` and `PasswordResetRateLimiterService` store throttle counters in a single process's memory. | For multi-instance/restart-resistant limits use a shared atomic store (Redis/DB), and verify locking/limits under load. Single-instance deployment must be documented and independently monitored. |
 | B-05 | High | Login JWTs are stored in browser localStorage, and explicit logout deletes browser data but does **not** invalidate previously issued JWTs on the server. | Assess XSS, use strict CSP/escaping, and specify token expiry/rotation and revocation policy. Prefer HttpOnly Secure SameSite cookies with CSRF protection if feasible. Test stolen-token and logged-out-token behavior. |
-| B-06 | High | CI/staging checks do not prove the #01–#08 fixes work against the live schema and integrations. | Pass backend context + unit tests with isolated MySQL, frontend build/lint/auth tests, and complete role-based staging QA. |
+| B-06 | High | Automated tests pass, but CI does not prove the #01–#08 fixes work against the **production** schema and external integrations. | Complete role-based staging QA, migration validation and concurrency smoke tests before release. |
 | B-07 | Medium | `SecurityConfig.java` allows the local development CORS origin in every environment and `/mail/**` is broadly public. | Split dev/prod CORS origins and review all public mail endpoints individually with abuse monitoring. |
-| B-08 | High | [Dependency-audit job](https://github.com/void-tech-shiv/KlInnovationHub/actions/runs/40673824998) reported **9 high-severity npm advisories** for locked versions of axios, follow-redirects, form-data, nanoid, postcss, react-router/react-router-dom, source-map-js, and vite. | Use reviewed patch/minor upgrades, regenerate and commit the lockfile, rerun npm audit and full frontend test/build/lint checks. Do not force major upgrades without compatibility tests. |
+| B-08 | Resolved | Initial [audit](https://github.com/void-tech-shiv/KlInnovationHub/actions/runs/40673824998) reported **9 high-severity npm advisories**. | Patched lockfile and checked `npm audit --omit=dev --audit-level=high` **PASS** on [run 40674371225](https://github.com/void-tech-shiv/KlInnovationHub/actions/runs/40674371225). Continue monitoring and separate dev-dependency audit. |
 
 ## Implemented in this audit branch
 
@@ -65,20 +66,21 @@ and high-severity npm dependency advisories are resolved.
 
 ## Executed GitHub Actions release gates
 
-[Latest five-job validation](https://github.com/void-tech-shiv/KlInnovationHub/actions/runs/40673824998)
+[Latest fully reviewed five-job validation](https://github.com/void-tech-shiv/KlInnovationHub/actions/runs/40674371225)
 recorded the following CI outcomes (distinct from staging/production QA):
 
 | Gate | Observed outcome |
 |---|---|
 | Frontend dependencies, 10 session-auth tests and Vite production build | **PASS** |
 | Frontend ESLint | **PASS**, with non-blocking hook dependency warnings |
-| Backend Java compilation + 41 tests including MySQL-backed Spring context | **PASS** in [previous complete run](https://github.com/void-tech-shiv/KlInnovationHub/actions/runs/40673613852); latest five-job run may still be completing |
+| Backend Java compilation + 41 tests including MySQL-backed Spring context | **PASS**, including Maven packaging |
 | Production transport configuration | **FAIL**, because committed frontend `.env.production` uses HTTP |
-| Production dependency advisory scan | **FAIL**, 9 high-severity vulnerabilities |
+| Production dependency advisory scan | **PASS**, patched lockfile; no high-severity advisories in the CI audit |
 
-Production transport and dependency advisories are **enforced release blockers**
-rather than silently ignored. Do not claim release-ready because the three
-compile/test/lint jobs passed.
+Production transport remains an **enforced release blocker**. Do not claim
+release-ready solely because the automated tests, lint and dependency audit
+passed. Verify the actual TLS endpoint, migrations and authenticated staging
+flows before any deployment.
 
 ## Verification matrix (requires CI and environment access)
 
