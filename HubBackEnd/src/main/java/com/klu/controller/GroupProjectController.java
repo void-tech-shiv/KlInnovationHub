@@ -11,6 +11,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import com.klu.dto.GroupProjectSubmissionRequest;
 import com.klu.exception.ForbiddenException;
 import com.klu.model.GroupProject;
 import com.klu.service.CurrentUserService;
@@ -29,12 +30,12 @@ public class GroupProjectController {
     CurrentUserService currentUser;
 
     @PostMapping("/submit/{teamLeadId}")
-    public String submitGroupProject(@Valid @RequestBody GroupProject p,@PathVariable Long teamLeadId) {
+    public String submitGroupProject(@Valid @RequestBody GroupProjectSubmissionRequest request,@PathVariable Long teamLeadId) {
     	
     	if(!teamLeadId.equals(currentUser.getCurrentStudent().getStudentId())) {
     		throw new ForbiddenException("Not authorized");
     	}
-        return groupProjectService.SubmitGroupProject(p,teamLeadId);
+        return groupProjectService.SubmitGroupProject(request.toEntity(),teamLeadId);
     }
     
     @GetMapping("/latest")

@@ -11,9 +11,12 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import com.klu.dto.CollaborationSubmissionRequest;
 import com.klu.model.Collaboration;
 import com.klu.service.CurrentUserService;
 import com.klu.service.implementation.CollaborationImple;
+
+import jakarta.validation.Valid;
 
 @RestController
 @RequestMapping("/collaboration")
@@ -26,9 +29,9 @@ public class CollaborationController {
     CurrentUserService currentUser;
 
     @PostMapping("/create")
-    public String createTeam(@RequestBody Collaboration collab) {
+    public String createTeam(@Valid @RequestBody CollaborationSubmissionRequest request) {
     	long studentId = currentUser.getCurrentStudent().getStudentId();
-    	collaborationService.CreateTeam(collab,studentId);
+    	collaborationService.CreateTeam(request.toEntity(),studentId);
         return "Collboration Posted Sucessfully";
     }
     @GetMapping("/all")
