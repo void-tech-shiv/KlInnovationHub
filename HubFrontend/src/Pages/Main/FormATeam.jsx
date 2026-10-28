@@ -56,10 +56,8 @@ const FormATeam = () => {
       if(loading) return;
       setLoading(true);
       try {
-          const studentId = localStorage.getItem("studentId");
           await axiosInstance.post(`/collaboration/create`,formData);
           setSuccessMsg("Team created successfully. Redirecting to dashboard...");
-          setIsSubmitted(true);
           setFormData({name:"",problemStatement:"", description:"", teamSize:"",skill1:"", skill2:"",skill3:"", linkedIn:"", status:true});
           if (window.gtag) {
             window.gtag("event", "team_created");

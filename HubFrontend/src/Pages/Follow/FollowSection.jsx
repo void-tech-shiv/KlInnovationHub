@@ -54,7 +54,7 @@ const FollowSection = ({ studentId, isOwnProfile }) => {
         setFollowersCount((prev) => prev + 1);
         setIsFollowing(true);
       }
-    } catch (err) {
+    } catch {
       toast.error("Something went wrong. Please try again.");
     }
   };
@@ -64,7 +64,7 @@ const FollowSection = ({ studentId, isOwnProfile }) => {
       const res = await authenticatedAxiosInstance.get(`/followers/list/${studentId}`);
       setFollowers(res.data);
       setShowFollowersModal(true);
-    } catch (err) {
+    } catch {
       toast.error("Something went wrong. Please try again.");
     }
   };
@@ -74,7 +74,7 @@ const FollowSection = ({ studentId, isOwnProfile }) => {
       const res = await authenticatedAxiosInstance.get(`/followers/following/${studentId}`);
       setFollowing(res.data);
       setShowFollowingModal(true);
-    } catch (err) {
+    } catch {
       toast.error("Something went wrong. Please try again.");
     }
   };

@@ -8,16 +8,6 @@ import "aos/dist/aos.css";
 import toast, { Toaster } from "react-hot-toast";
 
 const Section123 = () => {
-  useEffect(() => {
-      AOS.init({
-        duration: 1000,
-        once: true,
-        offset: 100,
-        easing: "ease-out-cubic",
-      });
-
-      fetchStats();
-    }, []);
     const [stats, setStats] = useState({
       projects: 0,
       students: 0,
@@ -34,6 +24,17 @@ const Section123 = () => {
       }
     }
   
+  useEffect(() => {
+      AOS.init({
+        duration: 1000,
+        once: true,
+        offset: 100,
+        easing: "ease-out-cubic",
+      });
+
+      fetchStats();
+    }, []);
+
     const cards = [
       { icon: FolderKanban, value: stats.projects, label: "Projects Submitted" },
       { icon: GraduationCap, value: stats.students, label: "Students Joined" },

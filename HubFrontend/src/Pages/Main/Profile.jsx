@@ -38,28 +38,6 @@ const Profile = () => {
     const isOwnProfile = !isReviewer && Number(studentId) === Number(loggedInStudentId);
   const navigate = useNavigate();
 
-    useEffect(() => {
-    const loadProfile = async () => {
-        const id = routeStudentId || loggedInStudentId;
-        await fetchData(id);
-
-        
-        if (routeStudentId) {
-        try {
-            const res = await authenticatedAxiosInstance.get(`/student/getById/${routeStudentId}`, profileAuth);
-            setStudent(res.data);
-        } catch (err) {
-            console.error(err);
-            toast.error("Something went wrong. Please try again.");
-        }
-        } else {
-        setStudent(loggedInStudent);
-        }
-    };
-
-    loadProfile();
-    }, [routeStudentId]);
-
   useEffect(() => {
   if (student) {
     setStudentName(student.student_name || "");
@@ -106,6 +84,29 @@ const Profile = () => {
         toast.error("Something went wrong.");
     }
     };
+    useEffect(() => {
+    const loadProfile = async () => {
+        const id = routeStudentId || loggedInStudentId;
+        await fetchData(id);
+
+        
+        if (routeStudentId) {
+        try {
+            const res = await authenticatedAxiosInstance.get(`/student/getById/${routeStudentId}`, profileAuth);
+            setStudent(res.data);
+        } catch (err) {
+            console.error(err);
+            toast.error("Something went wrong. Please try again.");
+        }
+        } else {
+        setStudent(loggedInStudent);
+        }
+    };
+
+    loadProfile();
+    }, [routeStudentId]);
+
+
     const openDeleteModal = (id, type) => {
     setSelectedProjectId(id);
     setDeleteType(type);
