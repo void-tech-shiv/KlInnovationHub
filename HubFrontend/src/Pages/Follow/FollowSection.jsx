@@ -18,25 +18,30 @@ const FollowSection = ({ studentId, isOwnProfile }) => {
   const navigate = useNavigate();
 
   useEffect(() => {
-    fetchData();
-  }, [studentId, isOwnProfile]);
+    let active = true;
 
-  const fetchData = async () => {
-    try {
-      const followersRes = await authenticatedAxiosInstance.get(`/followers/count/${studentId}`);
-      const followingRes = await authenticatedAxiosInstance.get(`/followers/followingCount/${studentId}`);
+    async function loadFollowers() {
+      try {
+        const [followersRes, followingRes] = await Promise.all([
+          authenticatedAxiosInstance.get(`/followers/count/${studentId}`),
+          authenticatedAxiosInstance.get(`/followers/followingCount/${studentId}`),
+        ]);
+        if (!active) return;
+        setFollowersCount(followersRes.data);
+        setFollowingCount(followingRes.data);
 
-      setFollowersCount(followersRes.data);
-      setFollowingCount(followingRes.data);
-
-      if (!isOwnProfile && !isReviewer) {
-        const followRes = await axiosInstance.get(`/followers/isFollowing/${studentId}`);
-        setIsFollowing(followRes.data);
+        if (!isOwnProfile && !isReviewer) {
+          const followRes = await axiosInstance.get(`/followers/isFollowing/${studentId}`);
+          if (active) setIsFollowing(followRes.data);
+        }
+      } catch {
+        if (active) toast.error("Something went wrong. Please try again.");
       }
-    } catch (err) {
-      toast.error("Something went wrong. Please try again.");
     }
-  };
+
+    loadFollowers();
+    return () => { active = false; };
+  }, [studentId, isOwnProfile, isReviewer]);
 
   const handleFollow = async () => {
     try {

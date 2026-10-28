@@ -73,7 +73,7 @@ const ExploreProjects = () => {
       const groupProjectsWithCounts = formattedGroupProjects.map((project) => ({...project,discussionCount:counts[`GROUP:${project.groupProjectId}`] || 0,}));
       setProjects(projectsWithCounts);
       setGroupProjects(groupProjectsWithCounts);
-    }catch (err) {toast.error("Something went wrong. Please try again.");} 
+    }catch {toast.error("Something went wrong. Please try again.");} 
     finally {setLoading(false);}
   };
 
@@ -143,7 +143,7 @@ const ExploreProjects = () => {
             p.groupProjectId === project.groupProjectId ? {...p,isLiked : liked,  likeCount: likeCount,}: p)
         );
       }
-    } catch(err) {
+    } catch {
       toast.error("Something went wrong. Please try again.");
     }
   };

@@ -37,7 +37,7 @@ const Navbar = () => {
       try {
         const res = await axiosInstance.get( "/notification/unreadCount");
         setUnreadCount(res.data);
-      } catch (err) {
+      } catch {
         toast.error("Something went wrong. Please try again.");
       }
     };
@@ -63,7 +63,7 @@ const Navbar = () => {
       setNotifications(notificationRes.data);
       setActivities(activityRes.data);
       setUnreadCount(0);
-    } catch(err) {
+    } catch {
       toast.error("Something went wrong. Please try again.");
     }finally {
       setNotificationsLoading(false);

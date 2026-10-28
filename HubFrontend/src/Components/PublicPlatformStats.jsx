@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { createElement, useEffect, useState } from "react";
 import { BarChart3, CheckCircle2, Clock3, FolderKanban, Heart, Loader2, Users, XCircle } from "lucide-react";
 import { getPublicAnalytics } from "../Api/publicAnalyticsApi";
 
@@ -68,7 +68,7 @@ export default function PublicPlatformStats() {
           {cards.map(([label, value, Icon]) => (
             <div key={label} className="rounded-2xl border border-accent/20 bg-secondary p-5">
               <div className="w-10 h-10 rounded-xl bg-accent text-white flex items-center justify-center">
-                <Icon size={20} />
+                {createElement(Icon, { size: 20 })}
               </div>
               <p className="mt-4 text-sm text-misty-sage">{label}</p>
               <p className="mt-1 text-3xl font-black text-vanilla-custard">

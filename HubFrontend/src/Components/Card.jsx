@@ -55,7 +55,7 @@ const Card = ({ project }) => {
       if (window.gtag) {
         window.gtag("event", "project_like");
       }
-    } catch (err) { toast.error("Something went wrong. Please try again.");}
+    } catch { toast.error("Something went wrong. Please try again.");}
   };
   const handleProfileClick = () => {
     const id = project.type === "GROUP"? project.teamLead?.studentId: project.student?.studentId;

@@ -45,7 +45,7 @@ const TeamApplications = () => {
       const applicationMap = new Map()
       myAppsRes.data.forEach(app => {applicationMap.set( app.collaboration.collaboration_id,app)});
       setMyApplications(applicationMap)
-    } catch (err) {
+    } catch {
       toast.error("Something went wrong. Please try again.");
     } finally {
       setLoading(false);
@@ -150,7 +150,7 @@ const TeamApplications = () => {
           setMyTeams(prev => prev.filter(team => team.collaboration_id !== selectedTeamId) );
           setShowDeleteModal(false);
           setSelectedTeamId(null);
-      } catch (error) {
+      } catch {
           toast.error("Something went wrong. Please try again.");
       }
   };

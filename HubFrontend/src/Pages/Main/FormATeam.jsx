@@ -9,7 +9,6 @@ const FormATeam = () => {
 
     const [formData, setFormData] = useState({name: "",problemStatement: "",description: "",teamSize: "",skill1: "",skill2: "",skill3: "",linkedIn: "",status: true});
     const [errorMsg, setErrorMsg] = useState("");
-    const [isSubmitted, setIsSubmitted] = useState(false);
     const [loading,setLoading] = useState(false);
     const [successMsg,setSuccessMsg] = useState("");
 
@@ -66,7 +65,7 @@ const FormATeam = () => {
             window.gtag("event", "team_created");
           }
           setTimeout(() => { navigate("/dashboard");},1500);
-      } catch(error) {
+      } catch {
           toast.error("Something went wrong. Please try again.");
           setErrorMsg("Failed to create collaboration");
       } finally {

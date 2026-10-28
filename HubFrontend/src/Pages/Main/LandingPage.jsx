@@ -1,7 +1,5 @@
 import { memo } from 'react';
 import Navbar from "../../Components/Navbar";
-import { useEffect, useState } from "react";
-import axiosInstance from "../../Api/axiosInstance";
 import CountUp from "react-countup";
 import {FolderKanban,GraduationCap,Handshake,Heart} from "lucide-react";
 import Solution from './LandingPageSections/Solution';

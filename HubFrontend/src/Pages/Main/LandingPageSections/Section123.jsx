@@ -25,14 +25,14 @@ const Section123 = () => {
       faculty: 0,
     });
   
-    const fetchStats = async () => {
+    async function fetchStats() {
       try {
         const res = await axiosInstance.get("/dashboard/stats");
         setStats(res.data);
-      } catch (error) {
+      } catch {
         toast.error("Something went wrong. Please try again.");
       }
-    };
+    }
   
     const cards = [
       { icon: FolderKanban, value: stats.projects, label: "Projects Submitted" },

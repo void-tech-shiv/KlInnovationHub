@@ -102,7 +102,7 @@ const Profile = () => {
         setSubmittedGroupProjects(pendingGroupProjectRes.data);
         setCollaborations(collaborationRes.data);
         setApplications(applicationRes.data);
-    } catch (err) {
+    } catch {
         toast.error("Something went wrong.");
     }
     };
@@ -118,7 +118,7 @@ const Profile = () => {
         localStorage.setItem("student",JSON.stringify(res.data));
         setShowLinksModal(false);
         window.location.reload();
-    } catch (error) {
+    } catch {
         toast.error("Something went wrong. Please try again.");}
     };
 
@@ -132,7 +132,7 @@ const Profile = () => {
                 setGroupProjects(prev =>prev.filter(p => p.groupProjectId !== selectedProjectId));
             }
             setShowDeleteModal(false);
-        } catch (error) {
+        } catch {
             toast.error("Something went wrong. Please try again.");
         }
     };

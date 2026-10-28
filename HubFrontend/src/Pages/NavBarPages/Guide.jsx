@@ -2,7 +2,6 @@ import Navbar from "../../Components/Navbar";
 import { useEffect, useState } from "react";
 import PublicPlatformStats from "../../Components/PublicPlatformStats";
 import axios from "axios";
-import projectReviewFlow from '/ProjectReviewFlow.png';
 
 export default function Guide() {
 
@@ -24,25 +23,6 @@ export default function Guide() {
   }, []);
 
 
-  const mistakes = [
-    "Building random YouTube clone projects",
-    "Using only the main branch",
-    "No GitHub README",
-    "No deployment",
-    "Copy-pasting code without understanding",
-    "Starting too late before reviews"
-  ];
-
-  const roadmap = [
-    "Find a Real Problem",
-    "Research Existing Solutions",
-    "Define Features",
-    "Select Tech Stack",
-    "Design UI & Database",
-    "Develop in Milestones",
-    "Test Thoroughly",
-    "Deploy & Document"
-  ];
 
 
   return (

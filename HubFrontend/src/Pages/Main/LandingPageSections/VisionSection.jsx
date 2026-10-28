@@ -2,6 +2,15 @@ import { memo,useEffect } from 'react';
 import AOS from "aos";
 import "aos/dist/aos.css";
 
+const NetworkNode = ({ title, className, aos, delay }) => (
+  <div
+    data-aos={aos}
+    data-aos-delay={delay}
+    className={`${className} px-8 py-4 rounded-2xlborder border-white bg-bloodstone backdrop-blur-xl text-white`}>
+    {title}
+  </div>
+);
+
 const VisionSection = () => {
   useEffect(() => {
     AOS.init({
@@ -12,14 +21,7 @@ const VisionSection = () => {
     });
   }, []);
 
-  const NetworkNode = ({ title, className, aos, delay }) => (
-    <div
-      data-aos={aos}
-      data-aos-delay={delay}
-      className={`${className} px-8 py-4 rounded-2xlborder border-white bg-bloodstone backdrop-blur-xl text-white`}>
-      {title}
-    </div>
-  );
+
 
   return (
     <div>

@@ -1,6 +1,7 @@
 import { useState } from "react";
 import axiosInstance from "../../Api/axiosInstance"
 import { useNavigate } from "react-router-dom";
+import toast from "react-hot-toast";
 
 const ForgotPassword = () => {
   const navigate = useNavigate();
@@ -14,7 +15,6 @@ const ForgotPassword = () => {
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
-  const [resetSuccess, setResetSuccess] = useState(false);
 
   const passwordRegex = /^(?=.*[A-Z])(?=.*[a-z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{10,64}$/;
 
@@ -79,13 +79,12 @@ const ForgotPassword = () => {
       setLoading(true);
       const res = await axiosInstance.post("/mail/resetPassword", {mail, newPassword,});
       if (res.data === "Password Updated Successfully") {
-        setResetSuccess(true);
         setMessage("Password updated successfully. Redirecting...");
         setTimeout(() => {navigate("/login");}, 2000);
       } else {
         setError(res.data);
       }
-    } catch (err) {
+    } catch {
       setError("Password reset failed");
     } finally {
       setLoading(false);

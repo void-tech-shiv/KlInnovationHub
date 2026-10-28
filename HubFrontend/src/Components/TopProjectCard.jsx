@@ -53,7 +53,7 @@ const TopProjectCard = ({project}) => {
       if (window.gtag) {
         window.gtag("event", "project_like");
       }
-    } catch (err) {
+    } catch {
       toast.error("Something went wrong. Please try again.");
     }
   };
