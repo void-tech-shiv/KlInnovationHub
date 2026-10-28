@@ -29,7 +29,7 @@ const AdminLogin = () => {
       const response = await adminAxiosInstance.post("/admin/login", {
         mail: form.mail.trim(),
         password: form.password,
-      });
+      }, { skipAuth: true });
 
       const data = response.data;
 

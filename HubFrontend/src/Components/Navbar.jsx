@@ -4,6 +4,7 @@ import { Link, NavLink, useNavigate } from "react-router-dom";
 import {useRef, useEffect } from "react";
 import { FaBell } from "react-icons/fa";
 import axiosInstance from "../Api/axiosInstance";
+import { clearRoleSession } from "../Api/sessionAuth";
 import toast, { Toaster } from "react-hot-toast";
 
 
@@ -119,9 +120,7 @@ const getActivityText = (a) => {
   }
 
   const handleLogout = () => {
-  localStorage.removeItem("studentId");
-  localStorage.removeItem("student");
-  localStorage.removeItem("token");
+  clearRoleSession("student");
   navigate("/");
   };
 

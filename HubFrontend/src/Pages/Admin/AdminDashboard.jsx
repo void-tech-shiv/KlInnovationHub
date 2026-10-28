@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { clearRoleSession } from "../../Api/sessionAuth";
 import { ShieldCheck,Users,Clock3,RefreshCw,Search,Inbox,Loader2,Mail,Building2,BriefcaseBusiness,CalendarDays,
   Flag,Trash2,Ban,UserRound,MessageSquareText,CheckCircle2, XCircle,LogOut,
 } from "lucide-react";
@@ -161,8 +162,7 @@ const AdminDashboard = () => {
 };
 
   const handleLogout = () => {
-    localStorage.removeItem("adminToken");
-    localStorage.removeItem("admin");
+    clearRoleSession("admin");
     navigate("/admin/login", { replace: true });
   };
 

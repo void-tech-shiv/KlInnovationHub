@@ -10,10 +10,12 @@ import {Users,Handshake,Rocket,Pencil} from "lucide-react";
 import FollowSection from "../Follow/FollowSection";
 import toast, { Toaster } from "react-hot-toast";
 import ReviewerNavbar from "../Reviewer/ReviewerNavbar";
+import { getSharedAuthRole } from "../../Api/sessionAuth";
 
 const Profile = () => {
   
-  const isReviewer = !!localStorage.getItem("reviewerToken");
+  const isReviewer = getSharedAuthRole() === "reviewer";
+  const profileAuth = { authRole: isReviewer ? "reviewer" : "student" };
   const { studentId: routeStudentId } = useParams();
   const loggedInStudent = JSON.parse(localStorage.getItem("student"));
   const loggedInStudentId = localStorage.getItem("studentId");
@@ -33,7 +35,7 @@ const Profile = () => {
   const [submittedProjects, setSubmittedProjects] = useState([]);
   const [submittedGroupProjects, setSubmittedGroupProjects] = useState([]);
   const [student, setStudent] = useState(routeStudentId ? null : loggedInStudent);
-    const isOwnProfile =Number(studentId) === Number(loggedInStudentId);
+    const isOwnProfile = !isReviewer && Number(studentId) === Number(loggedInStudentId);
   const navigate = useNavigate();
 
     useEffect(() => {
@@ -44,7 +46,7 @@ const Profile = () => {
         
         if (routeStudentId) {
         try {
-            const res = await authenticatedAxiosInstance.get(`/student/getById/${routeStudentId}`);
+            const res = await authenticatedAxiosInstance.get(`/student/getById/${routeStudentId}`, profileAuth);
             setStudent(res.data);
         } catch (err) {
             console.error(err);
@@ -76,21 +78,21 @@ const Profile = () => {
         collaborationRes,
         applicationRes,
         ] = await Promise.all([
-        authenticatedAxiosInstance.get(`/project/student/${id}`),
-        authenticatedAxiosInstance.get(`/groupProject/student/${id}`),
-        authenticatedAxiosInstance.get(`/collaboration/student/${id}`),
+        authenticatedAxiosInstance.get(`/project/student/${id}`, profileAuth),
+        authenticatedAxiosInstance.get(`/groupProject/student/${id}`, profileAuth),
+        authenticatedAxiosInstance.get(`/collaboration/student/${id}`, profileAuth),
         Number(id) === Number(loggedInStudentId) && !isReviewer
-            ? authenticatedAxiosInstance.get("/collabapplication/mine")
+            ? authenticatedAxiosInstance.get("/collabapplication/mine", profileAuth)
             : Promise.resolve({ data: [] }),
         ]);
 
         let pendingProjectRes = { data: [] };
         let pendingGroupProjectRes = { data: [] };
 
-        if (Number(id) === Number(loggedInStudentId)) {
+        if (isOwnProfile) {
             [pendingProjectRes, pendingGroupProjectRes] = await Promise.all([
-                authenticatedAxiosInstance.get("/project/my-pending"),
-                authenticatedAxiosInstance.get("/groupProject/my-pending"),
+                authenticatedAxiosInstance.get("/project/my-pending", profileAuth),
+                authenticatedAxiosInstance.get("/groupProject/my-pending", profileAuth),
             ]);
         }
 
