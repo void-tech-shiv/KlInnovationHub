@@ -79,7 +79,9 @@ const Profile = () => {
         authenticatedAxiosInstance.get(`/project/student/${id}`),
         authenticatedAxiosInstance.get(`/groupProject/student/${id}`),
         authenticatedAxiosInstance.get(`/collaboration/student/${id}`),
-        authenticatedAxiosInstance.get(`/collabapplication/student/${id}`),
+        Number(id) === Number(loggedInStudentId) && !isReviewer
+            ? authenticatedAxiosInstance.get("/collabapplication/mine")
+            : Promise.resolve({ data: [] }),
         ]);
 
         let pendingProjectRes = { data: [] };
@@ -231,7 +233,7 @@ return (
             </div>
         </div>
 
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 lg:gap-6 mt-12">
+        <div className={`grid grid-cols-2 ${isOwnProfile ? "lg:grid-cols-4" : "lg:grid-cols-3"} gap-4 lg:gap-6 mt-12`}>
             <div className="bg-white/10 backdrop-blur-xl border border-white/10  p-6 hover:-translate-y-2 duration-300">
                 <p className="text-slate-400">My Solo Projects</p>
                 <h2 className="text-3xl sm:text-4xl lg:text-5xl font-black text-white mt-3">{projects.length}</h2>
@@ -244,10 +246,12 @@ return (
                 <p className="text-slate-400">My Teams</p>
                 <h2 className="text-3xl sm:text-4xl lg:text-5xl font-black text-white mt-3"> {collaborations.length}</h2>
             </div>
+            {isOwnProfile && (
             <div className="bg-white/10 backdrop-blur-xl border border-white/10 p-6 hover:-translate-y-2 duration-300">
                 <p className="text-slate-400">Applications Sent</p>
                 <h2 className="text-3xl sm:text-4xl lg:text-5xl font-black text-white mt-3"> {applications.length}</h2>
             </div>
+            )}
         </div>
         {isOwnProfile && (
         <div onClick={() => navigate("/submitProject")}

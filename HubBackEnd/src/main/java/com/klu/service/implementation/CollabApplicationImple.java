@@ -4,7 +4,9 @@ import java.util.List;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
+import com.klu.dto.PublicCollabApplicationDto;
 import com.klu.exception.ForbiddenException;
 import com.klu.exception.ResourceNotFoundException;
 import com.klu.model.CollabApplication;
@@ -49,16 +51,29 @@ public class CollabApplicationImple implements CollabApplicationService {
 	    return "Application Submitted";
 	}
 
-	@Override
-	public List<CollabApplication> getAllCollabApplications() {
-		return collabApplicationRepo.findAll();
-	}
+    @Override
+    @Transactional(readOnly = true)
+    public List<PublicCollabApplicationDto> getApplicationsForOwnedTeams() {
+        Long ownerId = currentUser.getCurrentStudent().getStudentId();
+        return collabApplicationRepo.findByCollaboration_Student_StudentId(ownerId)
+                .stream()
+                .map(PublicCollabApplicationDto::from)
+                .toList();
+    }
 
-	@Override
-	public List<CollabApplication> getMyApplications(Long studentId) {
-		return collabApplicationRepo.findByStudent_StudentId(studentId);
-	}	
-	
+    @Override
+    @Transactional(readOnly = true)
+    public List<PublicCollabApplicationDto> getMyApplications(Long studentId) {
+        Long currentStudentId = currentUser.getCurrentStudent().getStudentId();
+        if (studentId == null || !currentStudentId.equals(studentId)) {
+            throw new ForbiddenException("Cannot view another student's applications");
+        }
+        return collabApplicationRepo.findByStudent_StudentId(currentStudentId)
+                .stream()
+                .map(PublicCollabApplicationDto::from)
+                .toList();
+    }
+
 	@Override
     public String updateApplicationStatus(Integer applicationId, String status) {
         CollabApplication app = collabApplicationRepo.findById(applicationId).orElseThrow(() -> new ResourceNotFoundException("Application not found"));

@@ -12,6 +12,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.klu.dto.CollaborationSubmissionRequest;
+import com.klu.dto.PublicCollaborationDto;
 import com.klu.model.Collaboration;
 import com.klu.service.CurrentUserService;
 import com.klu.service.implementation.CollaborationImple;
@@ -35,15 +36,15 @@ public class CollaborationController {
         return "Collboration Posted Sucessfully";
     }
     @GetMapping("/all")
-    public List<Collaboration> getAllCollaboration() {
-        return collaborationService.getAllCollaboration();
+    public List<PublicCollaborationDto> getAllCollaboration() {
+        return collaborationService.getAllCollaboration().stream().map(PublicCollaborationDto::from).toList();
     }
     
     @GetMapping("/student/{id}")
-    public List<Collaboration> getMyTeams(
+    public List<PublicCollaborationDto> getMyTeams(
             @PathVariable Long id){
 
-        return collaborationService.getMyTeams(id);
+        return collaborationService.getMyTeams(id).stream().map(PublicCollaborationDto::from).toList();
     }
     
     @DeleteMapping("/delete/{collaborationId}")
@@ -53,7 +54,7 @@ public class CollaborationController {
     }
     
     @GetMapping("/following")
-    public List<Collaboration> getFollowingCollaborations() {
-        return collaborationService.getFollowingCollaborations();
+    public List<PublicCollaborationDto> getFollowingCollaborations() {
+        return collaborationService.getFollowingCollaborations().stream().map(PublicCollaborationDto::from).toList();
     }
 }

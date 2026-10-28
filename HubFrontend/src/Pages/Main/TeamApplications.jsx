@@ -34,8 +34,8 @@ const TeamApplications = () => {
       const [myTeamsRes, allTeamsRes, allAppsRes, myAppsRes] = await Promise.all([
         axiosInstance.get(`/collaboration/student/${studentId}`),
         axiosInstance.get(`/collaboration/all`),
-        axiosInstance.get(`/collabapplication/all`),
-        axiosInstance.get(`/collabapplication/student/${studentId}`),
+        axiosInstance.get(`/collabapplication/owned`),
+        axiosInstance.get(`/collabapplication/mine`),
       ]);
       setMyTeams(myTeamsRes.data);
       setAllApplications(allAppsRes.data);
