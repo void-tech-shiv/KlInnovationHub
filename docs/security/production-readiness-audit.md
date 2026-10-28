@@ -52,6 +52,7 @@ and high-severity npm dependency advisories are resolved.
 | B-05 | High | Login JWTs are stored in browser localStorage, and explicit logout deletes browser data but does **not** invalidate previously issued JWTs on the server. | Assess XSS, use strict CSP/escaping, and specify token expiry/rotation and revocation policy. Prefer HttpOnly Secure SameSite cookies with CSRF protection if feasible. Test stolen-token and logged-out-token behavior. |
 | B-06 | High | CI/staging checks do not prove the #01–#08 fixes work against the live schema and integrations. | Pass backend context + unit tests with isolated MySQL, frontend build/lint/auth tests, and complete role-based staging QA. |
 | B-07 | Medium | `SecurityConfig.java` allows the local development CORS origin in every environment and `/mail/**` is broadly public. | Split dev/prod CORS origins and review all public mail endpoints individually with abuse monitoring. |
+| B-08 | High | [Dependency-audit job](https://github.com/void-tech-shiv/KlInnovationHub/actions/runs/40673824998) reported **9 high-severity npm advisories** for locked versions of axios, follow-redirects, form-data, nanoid, postcss, react-router/react-router-dom, source-map-js, and vite. | Use reviewed patch/minor upgrades, regenerate and commit the lockfile, rerun npm audit and full frontend test/build/lint checks. Do not force major upgrades without compatibility tests. |
 
 ## Implemented in this audit branch
 
@@ -61,6 +62,23 @@ and high-severity npm dependency advisories are resolved.
 - Route discussion API auth through the same role-isolated session helper as
   other Axios clients (fixes residual `studentToken || reviewerToken` behavior).
 - Add the release checklist below and retain all fixes on an isolated branch.
+
+## Executed GitHub Actions release gates
+
+[Latest five-job validation](https://github.com/void-tech-shiv/KlInnovationHub/actions/runs/40673824998)
+recorded the following CI outcomes (distinct from staging/production QA):
+
+| Gate | Observed outcome |
+|---|---|
+| Frontend dependencies, 10 session-auth tests and Vite production build | **PASS** |
+| Frontend ESLint | **PASS**, with non-blocking hook dependency warnings |
+| Backend Java compilation + 41 tests including MySQL-backed Spring context | **PASS** in [previous complete run](https://github.com/void-tech-shiv/KlInnovationHub/actions/runs/40673613852); latest five-job run may still be completing |
+| Production transport configuration | **FAIL**, because committed frontend `.env.production` uses HTTP |
+| Production dependency advisory scan | **FAIL**, 9 high-severity vulnerabilities |
+
+Production transport and dependency advisories are **enforced release blockers**
+rather than silently ignored. Do not claim release-ready because the three
+compile/test/lint jobs passed.
 
 ## Verification matrix (requires CI and environment access)
 
