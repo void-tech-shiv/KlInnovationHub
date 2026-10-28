@@ -12,9 +12,11 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.klu.dto.GroupProjectSubmissionRequest;
+import com.klu.dto.PublicGroupProjectDto;
 import com.klu.exception.ForbiddenException;
 import com.klu.model.GroupProject;
 import com.klu.service.CurrentUserService;
+import com.klu.service.PublicProjectResponseMapper;
 import com.klu.service.implementation.GroupProjectImple;
 
 import jakarta.validation.Valid;
@@ -25,6 +27,9 @@ public class GroupProjectController {
 
     @Autowired
     GroupProjectImple groupProjectService;
+
+    @Autowired
+    PublicProjectResponseMapper publicMapper;
     
     @Autowired
     CurrentUserService currentUser;
@@ -39,28 +44,28 @@ public class GroupProjectController {
     }
     
     @GetMapping("/latest")
-    public List<GroupProject> getLatestGroupSubmissions() {
-        return groupProjectService.getLatestGroupSubmissions();
+    public List<PublicGroupProjectDto> getLatestGroupSubmissions() {
+        return publicMapper.groupProjects(groupProjectService.getLatestGroupSubmissions());
     }
     @GetMapping("/all")
-    public List<GroupProject> getAllProjects() {
-        return groupProjectService.getAllProjects();
+    public List<PublicGroupProjectDto> getAllProjects() {
+        return publicMapper.groupProjects(groupProjectService.getAllProjects());
     }
     @GetMapping("/year/{year}")
-    public List<GroupProject> getProjectsByYear(@PathVariable Integer year) {
-        return groupProjectService.getProjectsByYear(year);
+    public List<PublicGroupProjectDto> getProjectsByYear(@PathVariable Integer year) {
+        return publicMapper.groupProjects(groupProjectService.getProjectsByYear(year));
     }
     @GetMapping("/branch/{branch}")
-    public List<GroupProject> getProjectsByBranch(@PathVariable String branch) {
-        return groupProjectService.getProjectsByBranch(branch);
+    public List<PublicGroupProjectDto> getProjectsByBranch(@PathVariable String branch) {
+        return publicMapper.groupProjects(groupProjectService.getProjectsByBranch(branch));
     }
     @GetMapping("/branch/{branch}/year/{year}")
-    public List<GroupProject> getProjectsByBranchAndYear(@PathVariable String branch,@PathVariable Integer year) {
-        return groupProjectService.getProjectsByBranchAndYear(branch, year);
+    public List<PublicGroupProjectDto> getProjectsByBranchAndYear(@PathVariable String branch,@PathVariable Integer year) {
+        return publicMapper.groupProjects(groupProjectService.getProjectsByBranchAndYear(branch, year));
     }
     @GetMapping("/student/{id}")
-    public List<GroupProject> getProjectsById(@PathVariable long id) {
-        return groupProjectService.getProjectsByid(id);
+    public List<PublicGroupProjectDto> getProjectsById(@PathVariable long id) {
+        return publicMapper.groupProjects(groupProjectService.getProjectsByid(id));
     }
     
     @DeleteMapping("/deleteProject/{projectId}")
@@ -69,7 +74,7 @@ public class GroupProjectController {
     }
     
     @GetMapping("/my-pending")
-    public List<GroupProject> getMyPendingProjects() {
-        return groupProjectService.getMyPendingProjects();
+    public List<PublicGroupProjectDto> getMyPendingProjects() {
+        return publicMapper.groupProjects(groupProjectService.getMyPendingProjects());
     }
 }

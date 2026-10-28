@@ -168,7 +168,9 @@ return (
                         />
                         <div className="text-white">
                             <h2 className="text-2xl sm:text-3xl lg:text-4xl font-bold">{student.student_name}</h2>
-                            <p className="text-slate-300 mt-2">{student.studentEmail}</p>
+                            {isOwnProfile && loggedInStudent?.studentEmail && (
+                                  <p className="text-slate-300 mt-2">{loggedInStudent.studentEmail}</p>
+                                )}
                             <div className="flex flex-wrap justify-center sm:justify-start items-center gap-4 mt-3">
                                 {student.githubUrl ? (
                                     <a href={student.githubUrl} target="_blank" rel="noopener noreferrer"className="text-white hover:text-cyan-300">

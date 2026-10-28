@@ -11,6 +11,8 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.klu.dto.SocialLinksRequest;
+import com.klu.dto.PublicStudentDto;
+import com.klu.exception.ForbiddenException;
 import com.klu.model.Student;
 import com.klu.repository.StudentRepo;
 import com.klu.service.CurrentUserService;
@@ -34,19 +36,17 @@ public class StudentController {
 		return studentService.CreateStudentByEmail(email, name);
 	}*/
 	@GetMapping("/getById/{id}")
-	public Student getStudentById(@PathVariable long id) {
-		return studentService.getStudentById(id);
-	}
+	public PublicStudentDto getStudentById(@PathVariable long id) {
+        return PublicStudentDto.from(studentService.getStudentById(id));
+    }
 	@GetMapping("/getByEmail")
-	public ResponseEntity<?> getStudent(@RequestParam String email) {
-	    try {
-	        return ResponseEntity.ok(
-	            studentService.getStudentByEmail(email)
-	        );
-	    } catch (RuntimeException e) {
-	        return ResponseEntity.status(404).body(e.getMessage());
-	    }
-	}
+	public ResponseEntity<PublicStudentDto> getStudent(@RequestParam String email) {
+        Student requester = currentUser.getCurrentStudent();
+        if (email == null || !requester.getStudentEmail().equalsIgnoreCase(email)) {
+            throw new ForbiddenException("Cannot look up another student's email");
+        }
+        return ResponseEntity.ok(PublicStudentDto.from(requester));
+    }
 	
 	@PutMapping("/socialLinks")
     public ResponseEntity<Student> updateSocialLinks(@RequestBody SocialLinksRequest request) {

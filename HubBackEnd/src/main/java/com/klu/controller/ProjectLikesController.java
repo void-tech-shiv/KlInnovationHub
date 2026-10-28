@@ -10,8 +10,10 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.klu.dto.ProjectLikeDto;
+import com.klu.dto.PublicProjectDto;
 import com.klu.model.Project;
 import com.klu.service.CurrentUserService;
+import com.klu.service.PublicProjectResponseMapper;
 import com.klu.service.implementation.ProjectLikesImple;
 
 @RestController
@@ -20,23 +22,26 @@ public class ProjectLikesController {
 
     @Autowired
     ProjectLikesImple projectLikesService;
+
+    @Autowired
+    PublicProjectResponseMapper publicMapper;
     
     @Autowired
     CurrentUserService currentUser;
 
     @GetMapping("/top")
-    public List<Project> getTopProjects() {
-        return projectLikesService.getTopProjects();
+    public List<PublicProjectDto> getTopProjects() {
+        return publicMapper.projects(projectLikesService.getTopProjects());
     }
     
     @GetMapping("/top3")
-    public List<Project> getTop3Projects() {
-        return projectLikesService.getTop3Projects();
+    public List<PublicProjectDto> getTop3Projects() {
+        return publicMapper.projects(projectLikesService.getTop3Projects());
     }
     
     @GetMapping("/top8")
-    public List<Project> getTop8Projects() {
-        return projectLikesService.getTop8Projects();
+    public List<PublicProjectDto> getTop8Projects() {
+        return publicMapper.projects(projectLikesService.getTop8Projects());
     }
     
     @PostMapping("/toggleLike/{projectId}")

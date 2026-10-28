@@ -28,7 +28,6 @@ const ExploreProjects = () => {
   const [selectedDiscussionProject, setSelectedDiscussionProject] = useState(null);
   const student = JSON.parse(localStorage.getItem("student") || "null");
   const reviewer = JSON.parse(localStorage.getItem("reviewer") || "null");
-  const studentId = JSON.parse(localStorage.getItem("studentId"));
   const interestedDomain = student?.interestedDomain || "";
   const isReviewer = !!localStorage.getItem("reviewerToken");
 
@@ -59,11 +58,11 @@ const ExploreProjects = () => {
       setLoading(true);
       const [projectRes,groupProjectRes] = await Promise.all([axiosInstance.get("/project/all"),axiosInstance.get("/groupProject/all"),]);
       const formattedProjects = projectRes.data.map((item) => {  
-        const isLiked = item.likes?.some((like) =>  Number(like.likedStudentId) === Number(studentId));
+        const isLiked = Boolean(item.isLiked);
         return {...item,  type: "INDIVIDUAL", isLiked: isLiked || false,};
       });
       const formattedGroupProjects = groupProjectRes.data.map((item) => {
-        const isLiked = item.likes?.some((like) => Number(like.likedStudentId) === Number(studentId));
+        const isLiked = Boolean(item.isLiked);
         return { ...item,type: "GROUP",isLiked: isLiked || false,};
       });
       const projectIds = formattedProjects.map((project) => project.projectId);

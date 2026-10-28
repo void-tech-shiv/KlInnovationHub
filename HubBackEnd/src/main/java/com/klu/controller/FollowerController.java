@@ -7,6 +7,8 @@ import org.springframework.web.bind.annotation.*;
 
 import com.klu.dto.FollowUserDto;
 import com.klu.dto.FollowingProjectsDto;
+import com.klu.dto.PublicFollowingProjectsDto;
+import com.klu.service.PublicProjectResponseMapper;
 import com.klu.service.FollowerService;
 
 @RestController
@@ -15,6 +17,9 @@ public class FollowerController {
 
     @Autowired
     private FollowerService followerService;
+
+    @Autowired
+    private PublicProjectResponseMapper publicMapper;
 
     @PostMapping("/follow/{studentId}")
     public String follow(@PathVariable Long studentId) {
@@ -52,7 +57,10 @@ public class FollowerController {
     }
 
     @GetMapping("/followingProjects")
-    public FollowingProjectsDto getFollowingProjects() {
-        return followerService.getFollowingProjects();
+    public PublicFollowingProjectsDto getFollowingProjects() {
+        FollowingProjectsDto following = followerService.getFollowingProjects();
+        return new PublicFollowingProjectsDto(
+                publicMapper.projects(following.getProjects()),
+                publicMapper.groupProjects(following.getGroupProjects()));
     }
 }
