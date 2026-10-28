@@ -101,3 +101,33 @@ jobs:
         run: mvn -B -ntp --no-transfer-progress test
       - name: Package (tests must not be silently skipped)
         run: mvn -B -ntp --no-transfer-progress -DskipTests=false package
+
+  production-transport:
+    name: Production HTTPS transport gate
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Reject plaintext production API URLs
+        run: node HubFrontend/scripts/check-production-env.mjs
+
+  production-dependencies:
+    name: Production npm dependency advisories
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: HubFrontend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: HubFrontend/package-lock.json
+      - run: npm ci
+      - name: Reject high or critical production dependency vulnerabilities
+        run: npm audit --omit=dev --audit-level=high

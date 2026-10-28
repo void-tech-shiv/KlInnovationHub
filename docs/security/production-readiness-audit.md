@@ -8,6 +8,30 @@ production site, database, secrets or infrastructure were tested.
 
 **Release decision: NO-GO until all blocking gates below pass.**
 
+## Verified CI evidence — 28 October 2026
+
+GitHub Actions job logs on the audit branch confirm that the first validation
+run (commit `25947ae`, [run 40672579778](https://github.com/void-tech-shiv/KlInnovationHub/actions/runs/40672579778))
+actually compiled **160 main Java source files** and **11 test Java files**,
+executed **41 backend tests (0 failures, 0 errors, 0 skipped)** including a
+Spring context test using temporary MySQL, and successfully packaged the
+backend. Frontend dependency installation, **10 auth session tests**, and
+Vite production compilation also passed.
+
+The initial ESLint job failed on **47 errors and 10 warnings**. Follow-up
+frontend cleanup reduced this count across repeated CI runs. Commit
+`10541d4` has a green frontend build/auth test job and a green ESLint job
+(with warnings remaining); the backend run on this commit was not yet complete
+at the time of this audit update.
+
+These successful checks validate compilation and automated tests—not the
+live production API or migrations. Staging manual QA and transport checks
+remain mandatory. The audit branch also adds explicit CI jobs that should
+**fail** until the production API endpoint is configured with verified HTTPS
+and high-severity npm dependency advisories are resolved.
+
+
+
 ## What was inspected
 
 - Spring Boot security filter chain, JWT filter, login/OTP and rate-limiting
