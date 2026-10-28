@@ -27,24 +27,16 @@ const Profile = () => {
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [selectedProjectId, setSelectedProjectId] = useState(null);
   const [deleteType, setDeleteType] = useState("");
-  const [studentName, setStudentName] = useState("");
-  const [githubUrl, setGithubUrl] = useState("");
-  const [linkedinUrl, setLinkedinUrl] = useState("");
-  const [selectedAvatar, setSelectedAvatar] = useState("");
+  const [studentName, setStudentName] = useState(loggedInStudent?.student_name || "");
+  const [githubUrl, setGithubUrl] = useState(loggedInStudent?.githubUrl || "");
+  const [linkedinUrl, setLinkedinUrl] = useState(loggedInStudent?.linkedinUrl || "");
+  const [selectedAvatar, setSelectedAvatar] = useState(loggedInStudent?.avatarUrl || "");
   const studentId = routeStudentId || loggedInStudentId;  
   const [submittedProjects, setSubmittedProjects] = useState([]);
   const [submittedGroupProjects, setSubmittedGroupProjects] = useState([]);
   const [student, setStudent] = useState(routeStudentId ? null : loggedInStudent);
     const isOwnProfile = !isReviewer && Number(studentId) === Number(loggedInStudentId);
   const navigate = useNavigate();
-
-  useEffect(() => {
-  if (student) {
-    setStudentName(student.student_name || "");
-    setGithubUrl(student.githubUrl || "");
-    setLinkedinUrl(student.linkedinUrl || "");
-    setSelectedAvatar(student.avatarUrl ||`/avatars/Avatar${(student.studentId % 40) + 1}.webp`);}
-  }, [student]);
 
     const [showLinksModal, setShowLinksModal] = useState(false);
 
@@ -94,6 +86,11 @@ const Profile = () => {
         try {
             const res = await authenticatedAxiosInstance.get(`/student/getById/${routeStudentId}`, profileAuth);
             setStudent(res.data);
+            setStudentName(res.data.student_name || "");
+            setGithubUrl(res.data.githubUrl || "");
+            setLinkedinUrl(res.data.linkedinUrl || "");
+            setSelectedAvatar(res.data.avatarUrl ||
+              `/avatars/Avatar${(res.data.studentId % 40) + 1}.webp`);
         } catch (err) {
             console.error(err);
             toast.error("Something went wrong. Please try again.");

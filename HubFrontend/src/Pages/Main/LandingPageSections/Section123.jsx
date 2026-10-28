@@ -15,24 +15,16 @@ const Section123 = () => {
       faculty: 0,
     });
   
-    async function fetchStats() {
-      try {
-        const res = await axiosInstance.get("/dashboard/stats");
-        setStats(res.data);
-      } catch {
-        toast.error("Something went wrong. Please try again.");
-      }
-    }
-  
-  useEffect(() => {
+    useEffect(() => {
       AOS.init({
         duration: 1000,
         once: true,
         offset: 100,
         easing: "ease-out-cubic",
       });
-
-      fetchStats();
+      axiosInstance.get("/dashboard/stats")
+        .then((res) => setStats(res.data))
+        .catch(() => toast.error("Something went wrong. Please try again."));
     }, []);
 
     const cards = [
