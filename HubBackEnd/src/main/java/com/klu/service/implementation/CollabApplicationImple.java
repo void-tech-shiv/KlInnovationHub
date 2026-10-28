@@ -12,6 +12,7 @@ import com.klu.exception.ForbiddenException;
 import com.klu.exception.ConflictException;
 import com.klu.exception.ResourceNotFoundException;
 import com.klu.model.CollabApplication;
+import com.klu.model.CollabApplicationStatus;
 import com.klu.model.Collaboration;
 import com.klu.model.Student;
 import com.klu.repository.CollabApplicationRepo;
@@ -100,17 +101,35 @@ public class CollabApplicationImple implements CollabApplicationService {
                 .toList();
     }
 
-	@Override
-    public String updateApplicationStatus(Integer applicationId, String status) {
-        CollabApplication app = collabApplicationRepo.findById(applicationId).orElseThrow(() -> new ResourceNotFoundException("Application not found"));
-        long currentUserId =currentUser.getCurrentStudent().getStudentId();
-        long teamOwnerId =app.getCollaboration().getStudent().getStudentId();
-        if (teamOwnerId != currentUserId) {
+    @Override
+    @Transactional
+    public String updateApplicationStatus(Integer applicationId, String requestedStatus) {
+        if (applicationId == null) {
+            throw new IllegalArgumentException("Application ID is required");
+        }
+        // Reject unsupported values, including PENDING, before touching the DB.
+        CollabApplicationStatus decision =
+                CollabApplicationStatus.parseOwnerDecision(requestedStatus);
+
+        // Row lock + transaction ensures a single transition from PENDING.
+        CollabApplication application = collabApplicationRepo
+                .findByIdForStatusUpdate(applicationId)
+                .orElseThrow(() -> new ResourceNotFoundException("Application not found"));
+
+        Long currentStudentId = currentUser.getCurrentStudent().getStudentId();
+        Long ownerId = application.getCollaboration().getStudent().getStudentId();
+        if (!currentStudentId.equals(ownerId)) {
             throw new ForbiddenException("Not authorized");
         }
-        app.setStatus(status.toUpperCase());
-        collabApplicationRepo.save(app);
-        return "Application status updated to " + status.toUpperCase();
+
+        if (!CollabApplicationStatus.PENDING.name().equals(application.getStatus())) {
+            throw new ConflictException(
+                    "This application has already been decided and cannot be changed");
+        }
+
+        application.setStatus(decision.name());
+        collabApplicationRepo.save(application);
+        return "Application status updated to " + decision.name();
     }
 
 }
