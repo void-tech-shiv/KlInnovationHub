@@ -1,6 +1,5 @@
 package com.klu.service.implementation;
 
-import java.security.SecureRandom;
 import java.time.LocalDateTime;
 import java.time.temporal.ChronoUnit;
 import java.util.Optional;
@@ -10,6 +9,7 @@ import org.springframework.mail.SimpleMailMessage;
 import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import com.klu.dto.ReviewerSignupDto;
 import com.klu.dto.ReviewerVerifyOtpDto;
@@ -19,6 +19,9 @@ import com.klu.model.ReviewerRequest;
 import com.klu.model.ReviewerRequestStatus;
 import com.klu.repository.ReviewerRepo;
 import com.klu.repository.ReviewerRequestRepo;
+import com.klu.security.OtpSecurityService;
+import com.klu.security.OtpSecurityService.Purpose;
+import com.klu.security.ratelimit.PasswordResetRateLimiterService;
 
 @Service
 public class ReviewerRegistrationService {
@@ -36,8 +39,10 @@ public class ReviewerRegistrationService {
     @Autowired private ReviewerRepo reviewerRepo;
     @Autowired private ReviewerRequestRepo reviewerRequestRepo;
     @Autowired private PasswordEncoder passwordEncoder;
-    private final SecureRandom secureRandom = new SecureRandom();
+    @Autowired private OtpSecurityService otpSecurity;
+    @Autowired private PasswordResetRateLimiterService requestLimiter;
 
+    @Transactional
     public String generateOtp(ReviewerSignupDto request) {
         if (request.getMail() == null || !request.getMail().matches("^[A-Za-z0-9]+(?:[._][A-Za-z0-9]+)*@kluniversity\\.in$")) {
             return "Use a valid KL University email";
@@ -48,7 +53,7 @@ public class ReviewerRegistrationService {
         String choiceError = validateChoices(request.getChoice1(), request.getChoice2(), request.getChoice3());
         if (choiceError != null) return choiceError;
 
-        Optional<UserSignUp> existing = userRepo.findByMail(request.getMail());
+        Optional<UserSignUp> existing = userRepo.findLockedByMail(request.getMail());
         if (existing.isPresent() && existing.get().isVerified()) {
             UserSignUp user = existing.get();
             if (!"ROLE_REVIEWER".equals(user.getRole())) return "User already exists. Please login.";
@@ -61,7 +66,24 @@ public class ReviewerRegistrationService {
             }
         }
 
-        int otp = secureRandom.nextInt(9000) + 1000;
+        if (!requestLimiter.tryRequest(request.getMail()).isAllowed()) {
+            return "Too many OTP requests. Please try again later.";
+        }
+
+        UserSignUp user = existing.orElseGet(UserSignUp::new);
+        if (existing.isPresent() && !user.isVerified()
+                && !"ROLE_REVIEWER".equals(user.getRole())) {
+            return "User already exists. Please login.";
+        }
+
+        user.setName(request.getName());
+        user.setMail(request.getMail());
+        user.setPassword(passwordEncoder.encode(request.getPassword()));
+        user.setRole("ROLE_REVIEWER");
+        user.setVerified(false);
+        int otp = otpSecurity.issue(user, Purpose.REVIEWER_SIGNUP);
+        userRepo.save(user);
+
         SimpleMailMessage message = new SimpleMailMessage();
         message.setTo(request.getMail());
         message.setSubject("Verify Your Reviewer Account • KL Innovation Hub");
@@ -70,32 +92,28 @@ public class ReviewerRegistrationService {
                 "OTP : " + otp + "\n\nThis OTP is valid for 3 minutes.\n\n" +
                 "After verification, your reviewer application will be sent to the administrator for approval.\n\n— KL Innovation Hub");
         sender.send(message);
-
-        UserSignUp user = existing.orElseGet(UserSignUp::new);
-        user.setName(request.getName());
-        user.setMail(request.getMail());
-        user.setPassword(passwordEncoder.encode(request.getPassword()));
-        user.setRole("ROLE_REVIEWER");
-        user.setOtp(otp);
-        user.setOtpTimeOut(LocalDateTime.now());
-        user.setVerified(false);
-        user.setResetOtpVerified(false);
-        userRepo.save(user);
         return "OTP sent successfully";
     }
 
+    @Transactional
     public String verifyOtp(ReviewerVerifyOtpDto request) {
+        if (request.getMail() == null || request.getMail().isBlank()) {
+            return "OTP Expired";
+        }
         String choiceError = validateChoices(request.getChoice1(), request.getChoice2(), request.getChoice3());
         if (choiceError != null) return choiceError;
-        UserSignUp user = userRepo.findByMail(request.getMail()).orElseThrow(() -> new RuntimeException("Mail Not Found"));
-        if (!"ROLE_REVIEWER".equals(user.getRole())) return "This account is not a reviewer account";
-        LocalDateTime otpTime = user.getOtpTimeOut();
-        if (otpTime == null || otpTime.plusMinutes(3).isBefore(LocalDateTime.now())) return "OTP Request TimeOut";
-        if (user.getOtp() != request.getOtp()) return "Invalid OTP";
 
+        UserSignUp user = userRepo.findLockedByMail(request.getMail()).orElse(null);
+        if (user == null || !"ROLE_REVIEWER".equals(user.getRole()) || user.isVerified()) {
+            return "OTP Expired";
+        }
+        String error = otpSecurity.check(user, request.getOtp(), Purpose.REVIEWER_SIGNUP);
+        if (error != null) {
+            userRepo.save(user);
+            return error;
+        }
         user.setVerified(true);
-        user.setOtp(0);
-        user.setOtpTimeOut(null);
+        otpSecurity.invalidate(user);
         userRepo.save(user);
 
         ReviewerRequest reviewerRequest = new ReviewerRequest();

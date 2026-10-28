@@ -27,11 +27,15 @@ const ForgotPassword = () => {
     }
     try {
       setLoading(true);
-      const res = await axiosInstance.post(`/mail/forgotPassword?mail=${mail}`);
-      setMessage(res.data);
-      setOtpSent(true);
+      const res = await axiosInstance.post(`/mail/forgotPassword?mail=${encodeURIComponent(mail.trim())}`);
+      if (res.data === "OTP Sent") {
+        setMessage("OTP sent to your email");
+        setOtpSent(true);
+      } else {
+        setError(res.data);
+      }
     } catch (err) {
-      setError("Failed to send OTP");
+      setError(typeof err.response?.data === "string" ? err.response.data : "Failed to send OTP");
     } finally {
       setLoading(false);
     }
@@ -40,8 +44,8 @@ const ForgotPassword = () => {
   const verifyOtp = async () => {
     setError("");
     setMessage("");
-    if (!otp) {
-      setError("Please enter OTP");
+    if (!/^\d{6}$/.test(otp)) {
+      setError("Enter the 6-digit OTP");
       return;
     }
     try {
@@ -54,7 +58,7 @@ const ForgotPassword = () => {
         setError(res.data);
       }
     } catch (err) {
-      setError("OTP verification failed");
+      setError(typeof err.response?.data === "string" ? err.response.data : "OTP verification failed");
     } finally {
       setLoading(false);
     }
@@ -119,7 +123,7 @@ const ForgotPassword = () => {
         {otpSent && !otpVerified && (
           <div className="flex flex-col gap-3 mb-6 animate-fade-in">
             <label className="text-tan font-medium">Enter OTP</label>
-            <input type="number" value={otp}onChange={(e) => setOtp(e.target.value)} placeholder="4 Digit OTP"
+            <input type="text" value={otp}onChange={(e) => setOtp(e.target.value.replace(/\D/g, "").slice(0, 6))} placeholder="6 Digit OTP" inputMode="numeric" maxLength={6}
               className="w-full p-3 rounded-xl bg-white/10 border border-white/20 text-white outline-none"
             />
             <button onClick={verifyOtp} disabled={loading}

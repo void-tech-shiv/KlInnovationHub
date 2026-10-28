@@ -78,7 +78,7 @@ const TeacherSignup = () => {
 
   const verifyOtp = async (event) => {
     event.preventDefault();
-    if (otp.length !== 4) return;
+    if (otp.length !== 6) return;
     setLoading(true);
     try {
       const response = await axiosInstance.post("/reviewer/verifyOtp", {
@@ -149,7 +149,7 @@ const TeacherSignup = () => {
             </div>
             {form.password && !otpSent && <div className="text-sm text-red-600 space-y-1">{form.password.length < 8 && <p>• At least 8 characters</p>}{!/[A-Z]/.test(form.password) && <p>• One uppercase letter</p>}{!/[a-z]/.test(form.password) && <p>• One lowercase letter</p>}{!/\d/.test(form.password) && <p>• One number</p>}{passwordRegex.test(form.password) && <p className="text-emerald-700">✓ Strong password</p>}</div>}
             <textarea name="reason" value={form.reason} onChange={handleChange} disabled={otpSent} rows="3" maxLength={500} placeholder="Why would you like to review student projects? (Optional)" className="w-full p-3 rounded-xl border border-gray-800 text-black outline-none disabled:bg-gray-100 resize-none" />
-            {!otpSent ? <button onClick={sendOtp} type="button" disabled={loading} className="w-full bg-primary text-white font-bold py-3 rounded-xl disabled:opacity-50">{loading ? "Sending OTP..." : "Send OTP"}</button> : <><div className="flex gap-3"><input value={otp} onChange={event => setOtp(event.target.value.replace(/\D/g, "").slice(0, 4))} inputMode="numeric" placeholder="Enter 4-digit OTP" className="flex-1 p-3 rounded-xl border border-gray-800 text-black outline-none" /><button onClick={verifyOtp} type="button" disabled={loading || otp.length !== 4} className="bg-primary text-tan font-bold px-6 rounded-xl disabled:opacity-50">Verify</button></div><button onClick={resendOtp} type="button" disabled={timer > 0 || loading} className="w-full text-fuchsia-950 font-semibold disabled:opacity-50">{timer > 0 ? `Resend OTP in ${timer}s` : "Resend OTP"}</button></>}
+            {!otpSent ? <button onClick={sendOtp} type="button" disabled={loading} className="w-full bg-primary text-white font-bold py-3 rounded-xl disabled:opacity-50">{loading ? "Sending OTP..." : "Send OTP"}</button> : <><div className="flex gap-3"><input value={otp} onChange={event => setOtp(event.target.value.replace(/\D/g, "").slice(0, 6))} inputMode="numeric" placeholder="Enter 6-digit OTP" className="flex-1 p-3 rounded-xl border border-gray-800 text-black outline-none" /><button onClick={verifyOtp} type="button" disabled={loading || otp.length !== 6} className="bg-primary text-tan font-bold px-6 rounded-xl disabled:opacity-50">Verify</button></div><button onClick={resendOtp} type="button" disabled={timer > 0 || loading} className="w-full text-fuchsia-950 font-semibold disabled:opacity-50">{timer > 0 ? `Resend OTP in ${timer}s` : "Resend OTP"}</button></>}
           </form>
           <div className="mt-6 pt-5 border-t border-gray-800 text-center"><button onClick={() => navigate("/login")} className="text-primary font-semibold hover:underline">Already approved? Login</button></div>
         </div>

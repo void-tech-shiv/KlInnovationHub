@@ -30,6 +30,8 @@ public class UserSignUp {
 	
 	private String password;
 	private int otp;
+    private String otpPurpose;
+    private int otpFailedAttempts;
 	
 	private LocalDateTime otpTimeOut;
 	
