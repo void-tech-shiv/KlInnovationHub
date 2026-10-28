@@ -57,8 +57,8 @@ class CollaborationApplicationPrivacyTests {
         List<PublicCollabApplicationDto> result = service.getApplicationsForOwnedTeams();
 
         assertEquals(1, result.size());
-        assertEquals(25L, result.get(0).student().studentId());
-        assertEquals(101, result.get(0).collaboration().collaboration_id());
+        assertEquals(25L, result.get(0).student().studentId().longValue());
+        assertEquals(101, result.get(0).collaboration().collaboration_id().intValue());
         verify(repository).findByCollaboration_Student_StudentId(10L);
         verify(repository, never()).findAll();
     }
